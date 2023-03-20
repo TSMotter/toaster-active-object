@@ -11,6 +11,8 @@ if(TARGET_GROUP STREQUAL DemoThreadSafeQueue)
   add_subdirectory(ThreadSafeQueue)
 elseif(TARGET_GROUP STREQUAL DemoActiveObject)
   add_subdirectory(ActiveObject)
+elseif(TARGET_GROUP STREQUAL DemoToasterActiveObject)
+  add_subdirectory(ToasterActiveObject)
 endif()
 
 add_subdirectory("${TARGET_GROUP}")
