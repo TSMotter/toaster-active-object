@@ -11,8 +11,6 @@ if(TARGET_GROUP STREQUAL DemoThreadSafeQueue)
   add_subdirectory(ThreadSafeQueue)
 elseif(TARGET_GROUP STREQUAL DemoActiveObject)
   add_subdirectory(ActiveObject)
-else()
-  message(FATAL_ERROR "Invalid TARGET_GROUP !")
 endif()
 
 add_subdirectory("${TARGET_GROUP}")

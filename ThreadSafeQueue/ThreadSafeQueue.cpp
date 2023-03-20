@@ -25,7 +25,7 @@ void test_queue()
     queue->put(std::move(data1));
     queue->put(std::move(data2));
     queue->put_prioritized(std::move(data3));
-    t1.join(); // Blocks the main thread until t1 thread is finished
-    t2.join(); // Blocks the main thread until t2 thread is finished
-    t3.join(); // Blocks the main thread until t3 thread is finished
+    t1.join();  // Blocks the main thread until t1 thread is finished
+    t2.join();  // Blocks the main thread until t2 thread is finished
+    t3.join();  // Blocks the main thread until t3 thread is finished
 }
