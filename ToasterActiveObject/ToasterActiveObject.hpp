@@ -1,12 +1,18 @@
-#ifndef __ACTIVEOBJECT__
-#define __ACTIVEOBJECT__
+#ifndef __TOASTERACTIVEOBJECT__
+#define __TOASTERACTIVEOBJECT__
 
 #include <iostream>
 #include <map>
+#include <thread>
 #include <memory>
 #include <vector>
 
-#include "boost/signals2.hpp"
+#include <boost/asio.hpp>
+#include <boost/variant.hpp>
+#include <boost/signals2.hpp>
+
+#include "Events.hpp"
+#include "ThreadSafeQueue.hpp"
 
 class Toaster;
 
@@ -52,6 +58,41 @@ static const std::vector<std::string> stringfier_StateValue{
 const std::string &stringify(StateValue state);
 std::ostream      &operator<<(std::ostream &os, const tao::StateValue &state);
 
+class ExternalEventWrapper
+{
+   private:
+    enum class EventType
+    {
+        unknown,
+        external_entity_event,
+        internal_event,
+    };
+    struct type_wrapper : public boost::static_visitor<EventType>
+    {
+        EventType operator()(const InternalEvent & /*obj*/) const
+        {
+            return EventType::internal_event;
+        }
+        EventType operator()(const ExternalEntityInfo & /*obj*/) const
+        {
+            return EventType::external_entity_event;
+        }
+    };
+    type_wrapper                                      wrapper;
+    boost::variant<InternalEvent, ExternalEntityInfo> m_event;
+    EventType                                         m_type;
+
+    tao::InternalEvent map_external_entity_to_internal_event(
+        const ExternalEntityInfo &external_entity_event) const;
+
+   public:
+    ExternalEventWrapper(boost::variant<InternalEvent, ExternalEntityInfo> e)
+        : m_event{e}, m_type{e.apply_visitor(wrapper)}
+    {
+    }
+
+    tao::InternalEvent map_external_to_internal_event();
+};
 
 class GenericToasterState
 {
@@ -155,28 +196,37 @@ class Toaster
         charcoal,
     };
 
-    bool                                      m_on{false};
+    bool                                      m_running{false};
     std::shared_ptr<tao::GenericToasterState> m_state;
     tao::StateValue                           m_next_state{tao::StateValue::UNKNOWN};
     DoorStatus                                m_door_status;
+    std::shared_ptr<IThreadSafeQueue<tao::ExternalEventWrapper>> m_queue;
 
    public:
-    Toaster()
+    Toaster() : m_queue{std::make_shared<SimplestThreadSafeQueue<tao::ExternalEventWrapper>>()}
     {
         // load_configs(config);
-        // check_door_state();
         set_initial_state(tao::StateValue::STATE_HEATING);
     }
     ~Toaster()
     {
+        stop();
+        m_queue->clear();
     }
 
     // Methods related to the general operation of any object of this architecture
     void set_next_state(tao::StateValue new_state);
     void set_state(tao::StateValue new_state);
     void transition_state();
+    void state_machine_iteration();
     void state_machine_iteration(tao::InternalEvent evt);
     void set_initial_state(tao::StateValue new_state);
+    // Thread related methods
+    void run();
+    void start();
+    void stop();
+
+    // void callback_external_entity_event(const ExternalEntityInfo &event);
 
     // Methods related to the specifics of this object type (toaster)
     void heater_on();
@@ -192,8 +242,9 @@ class Toaster
     bool  temp_reached();
 
    private:
-    float m_temp;
-    float m_target_temp;
+    float       m_temp;
+    float       m_target_temp;
+    std::thread m_thread;
 };
 
 #endif

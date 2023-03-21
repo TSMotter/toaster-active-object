@@ -76,7 +76,7 @@ class SimplestThreadSafeQueue : public IThreadSafeQueue<T>
         {
             myLogger->warn("[wait_and_pop()] nullptr result");
         }
-        myLogger->debug("[wait_and_pop()] Consuming data {0} in background thread", (*result));
+        myLogger->debug("[wait_and_pop()] Consuming data in background thread");
         lock.unlock();
         return result;
     }
@@ -110,8 +110,7 @@ class SimplestThreadSafeQueue : public IThreadSafeQueue<T>
                 myLogger->warn("[wait_and_pop_for(const std::chrono...] nullptr result");
             }
             myLogger->debug(
-                "[wait_and_pop_for(const std::chrono...] Consuming data {0} in background thread",
-                (*result));
+                "[wait_and_pop_for(const std::chrono...] Consuming data in background thread");
             lock.unlock();
         }
         return result;

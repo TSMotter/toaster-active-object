@@ -6,6 +6,10 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <mutex>
+#include <chrono>
+#include <thread>
+
 #include "ToasterActiveObject.hpp"
 
 
@@ -19,19 +23,14 @@ int main(int argc, char **argv)
 {
     /* Binds the SIGINT signal to my custom handler */
     signal(SIGINT, sigint_handler);
+
     auto toaster = std::make_shared<Toaster>();
 
-    int k = 0;
-    std::cin >> k;
-    while (true)
-    {
-        std::cout << "------------------" << std::endl;
-        tao::InternalEvent event = (tao::InternalEvent)((k % (int) tao::InternalEvent::evt_max));
-        std::cout << "Event: " << stringify(event) << std::endl;
-        toaster->state_machine_iteration(event);
-        std::cout << "------------------" << std::endl;
-        std::cin >> k;
-    }
+    // boost::bind(&Toaster::callback_external_entity_event, toaster, _1);
+
+    toaster->start();
+
+    while(true);
 
     return 0;
 }

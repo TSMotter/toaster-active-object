@@ -9,9 +9,10 @@ set(TARGET_GROUP helloworld CACHE STRING "Specify the TARGET_GROUP?")
 
 if(TARGET_GROUP STREQUAL DemoThreadSafeQueue)
   add_subdirectory(ThreadSafeQueue)
-elseif(TARGET_GROUP STREQUAL DemoActiveObject)
+  elseif(TARGET_GROUP STREQUAL DemoActiveObject)
   add_subdirectory(ActiveObject)
-elseif(TARGET_GROUP STREQUAL DemoToasterActiveObject)
+  elseif(TARGET_GROUP STREQUAL DemoToasterActiveObject)
+  add_subdirectory(ThreadSafeQueue)
   add_subdirectory(ToasterActiveObject)
 endif()
 

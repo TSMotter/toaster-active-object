@@ -48,7 +48,7 @@ void tao::GenericToasterState::unhandled_event(InternalEvent event)
     switch (event)
     {
         case tao::InternalEvent::evt_stop:
-            m_toaster->m_on = false;
+            m_toaster->m_running = false;
             break;
         default:
             std::cout << "Event not handled at all" << std::endl;
@@ -202,6 +202,45 @@ void tao::DoorOpenState::on_exit()
     m_toaster->internal_lamp_off();
 }
 
+
+/* *************************************************************************************************
+Implementations of ExternalEventWrapper
+************************************************************************************************* */
+tao::InternalEvent tao::ExternalEventWrapper::map_external_entity_to_internal_event(
+    const ExternalEntityInfo &external_entity_event) const
+{
+    // Could be a std::map or a std::vector instead of a switch
+    switch (external_entity_event.type())
+    {
+        case ExternalEntityInfo::Type::door_opened:
+            return tao::InternalEvent::evt_door_open;
+            break;
+        case ExternalEntityInfo::Type::door_closed:
+            return tao::InternalEvent::evt_door_close;
+            break;
+        default:
+            return tao::InternalEvent::unknown;
+    }
+}
+
+tao::InternalEvent tao::ExternalEventWrapper::map_external_to_internal_event()
+{
+    std::cout << "tao::ExternalEventWrapper::map_external_to_internal_event()" << std::endl;
+    switch (m_type)
+    {
+        case tao::ExternalEventWrapper::EventType::external_entity_event:
+            return map_external_entity_to_internal_event(boost::get<ExternalEntityInfo>(m_event));
+            break;
+        case tao::ExternalEventWrapper::EventType::internal_event:
+            return boost::get<InternalEvent>(m_event);
+            break;
+        default:
+            std::cout << "Discarding unknown external event for Toaster" << std::endl;
+            return tao::InternalEvent::unknown;
+            break;
+    }
+}
+
 /* *************************************************************************************************
 Implementations of Toaster
 ************************************************************************************************* */
@@ -240,10 +279,19 @@ void Toaster::transition_state()
 {
     if (m_next_state != tao::StateValue::UNKNOWN)
     {
+        // @TODO Currently, on_exit() is called when switching from a superstate to one substate
         m_state->on_exit();
         set_state(m_next_state);
         m_state->on_entry();
     }
+}
+
+void Toaster::state_machine_iteration()
+{
+    std::cout << "Toaster::state_machine_iteration()" << std::endl;
+    tao::InternalEvent curr_evt = m_queue->wait_and_pop()->map_external_to_internal_event();
+    m_state->process_internal_event(curr_evt);
+    transition_state();
 }
 
 void Toaster::state_machine_iteration(tao::InternalEvent evt)
@@ -258,6 +306,54 @@ void Toaster::set_initial_state(tao::StateValue new_state)
     set_state(new_state);
     m_state->on_entry();
 }
+
+void Toaster::run()
+{
+    std::cout << "Toaster::run()" << std::endl;
+    do
+    {
+        state_machine_iteration();
+    } while (m_running);
+}
+
+void Toaster::start()
+{
+    std::cout << "Toaster::start()" << std::endl;
+    m_running = true;
+    m_thread  = std::thread(&Toaster::run, this);
+}
+
+void Toaster::stop()
+{
+    std::cout << "Toaster::stop()" << std::endl;
+    if (!m_running)
+        return;
+
+    m_queue->put_prioritized(tao::ExternalEventWrapper(tao::InternalEvent::evt_stop));
+
+    if (m_thread.joinable())
+        m_thread.join();
+
+    m_queue->clear();
+}
+
+/*
+void Toaster::callback_external_entity_event(const ExternalEntityInfo &event)
+{
+   switch (event.type())
+   {
+   case ExternalEntityInfo::Type::door_opened:
+      m_queue->put(tao::ExternalEventWrapper(event));
+      break;
+   case ExternalEntityInfo::Type::door_closed:
+      m_queue->put_prioritized(tao::ExternalEventWrapper(event));
+      break;
+   default:
+      std::cout << "Warning: Toaster trying to handle unexpected event: " << stringify(event) <<
+std::endl; break;
+   }
+}
+*/
 
 void Toaster::heater_on()
 {
