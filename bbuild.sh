@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+source format.sh $1
+
 rm -rf build
 cmake -S . -B build -D TARGET_GROUP=$1
 cmake --build build --parallel 8
