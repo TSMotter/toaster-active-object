@@ -26,11 +26,17 @@ int main(int argc, char **argv)
 
     auto toaster = std::make_shared<Toaster>();
 
-    // boost::bind(&Toaster::callback_external_entity_event, toaster, _1);
-
     toaster->start();
 
-    while(true);
+    while (true)
+    {
+        toaster->put_external_entity_event(ExternalEntityEvtType::door_closed);
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+        std::cout << "---------------------------" << std::endl;
+        toaster->put_external_entity_event(ExternalEntityEvtType::door_opened);
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+        std::cout << "---------------------------" << std::endl;
+    }
 
     return 0;
 }

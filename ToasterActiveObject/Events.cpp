@@ -1,22 +1,21 @@
 #include "Events.hpp"
 
-const std::string& stringify(const ExternalEntityInfo& event)
+const std::string& stringify(const ExternalEntityEvent& event)
 {
-    static const std::map<ExternalEntityInfo::Type, std::string> stringifier_map{
-        {ExternalEntityInfo::Type::unknown, "ExternalEntityInfo::Type::unknown"},
-        {ExternalEntityInfo::Type::trigger_something,
-         "ExternalEntityInfo::Type::trigger_something"},
-        {ExternalEntityInfo::Type::door_opened, "ExternalEntityInfo::Type::door_opened"},
-        {ExternalEntityInfo::Type::door_closed, "ExternalEntityInfo::Type::door_closed"}};
-    auto result_iterator = stringifier_map.find(event.type());
+    static const std::map<ExternalEntityEvtType, std::string> stringifier_map{
+        {ExternalEntityEvtType::unknown, "ExternalEntityEvtType::unknown"},
+        {ExternalEntityEvtType::trigger_something, "ExternalEntityEvtType::trigger_something"},
+        {ExternalEntityEvtType::door_opened, "ExternalEntityEvtType::door_opened"},
+        {ExternalEntityEvtType::door_closed, "ExternalEntityEvtType::door_closed"}};
+    auto result_iterator = stringifier_map.find(event.which());
     if (result_iterator != stringifier_map.end())
     {
         return result_iterator->second;
     }
-    return stringifier_map.at(ExternalEntityInfo::Type::unknown);
+    return stringifier_map.at(ExternalEntityEvtType::unknown);
 }
-std::ostream& operator<<(std::ostream& os, const ExternalEntityInfo& orchestrator_info)
+std::ostream& operator<<(std::ostream& os, const ExternalEntityEvent& evt)
 {
-    os << stringify(orchestrator_info);
+    os << stringify(evt);
     return os;
 }

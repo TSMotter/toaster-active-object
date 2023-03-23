@@ -50,6 +50,14 @@ void tao::GenericToasterState::unhandled_event(InternalEvent event)
         case tao::InternalEvent::evt_stop:
             m_toaster->m_running = false;
             break;
+        case tao::InternalEvent::evt_door_close:
+            m_toaster->m_door_status = Toaster::DoorStatus::closed;
+            set_next_state(tao::StateValue::STATE_HEATING);
+            break;
+        case tao::InternalEvent::evt_door_open:
+            m_toaster->m_door_status = Toaster::DoorStatus::opened;
+            set_next_state(tao::StateValue::STATE_DOOR_OPEN);
+            break;
         default:
             std::cout << "Event not handled at all" << std::endl;
             break;
@@ -71,10 +79,6 @@ void tao::HeatingSuperState::unhandled_event(InternalEvent event)
     std::cout << "HeatingSuperState::unhandled_event: " << stringify(event) << std::endl;
     switch (event)
     {
-        case tao::InternalEvent::evt_door_open:
-            m_toaster->m_door_status = Toaster::DoorStatus::opened;
-            set_next_state(tao::StateValue::STATE_DOOR_OPEN);
-            break;
         default:
             tao::GenericToasterState::unhandled_event(event);
             break;
@@ -96,7 +100,7 @@ void tao::HeatingSuperState::process_internal_event(InternalEvent event)
             m_toaster->check_temp();
             break;
         default:
-            tao::HeatingSuperState::unhandled_event(event);
+            tao::GenericToasterState::unhandled_event(event);
             break;
     }
 }
@@ -204,18 +208,18 @@ void tao::DoorOpenState::on_exit()
 
 
 /* *************************************************************************************************
-Implementations of ExternalEventWrapper
+Implementations of IncomingEventWrapper
 ************************************************************************************************* */
-tao::InternalEvent tao::ExternalEventWrapper::map_external_entity_to_internal_event(
-    const ExternalEntityInfo &external_entity_event) const
+tao::InternalEvent tao::IncomingEventWrapper::map_external_entity_event_to_internal_event(
+    const ExternalEntityEvent &evt) const
 {
     // Could be a std::map or a std::vector instead of a switch
-    switch (external_entity_event.type())
+    switch (evt.which())
     {
-        case ExternalEntityInfo::Type::door_opened:
+        case ExternalEntityEvtType::door_opened:
             return tao::InternalEvent::evt_door_open;
             break;
-        case ExternalEntityInfo::Type::door_closed:
+        case ExternalEntityEvtType::door_closed:
             return tao::InternalEvent::evt_door_close;
             break;
         default:
@@ -223,15 +227,16 @@ tao::InternalEvent tao::ExternalEventWrapper::map_external_entity_to_internal_ev
     }
 }
 
-tao::InternalEvent tao::ExternalEventWrapper::map_external_to_internal_event()
+tao::InternalEvent tao::IncomingEventWrapper::map_external_to_internal_event()
 {
-    std::cout << "tao::ExternalEventWrapper::map_external_to_internal_event()" << std::endl;
+    std::cout << "tao::IncomingEventWrapper::map_external_to_internal_event()" << std::endl;
     switch (m_type)
     {
-        case tao::ExternalEventWrapper::EventType::external_entity_event:
-            return map_external_entity_to_internal_event(boost::get<ExternalEntityInfo>(m_event));
+        case tao::IncomingEventWrapper::EventType::external_entity_event:
+            return map_external_entity_event_to_internal_event(
+                boost::get<ExternalEntityEvent>(m_event));
             break;
-        case tao::ExternalEventWrapper::EventType::internal_event:
+        case tao::IncomingEventWrapper::EventType::internal_event:
             return boost::get<InternalEvent>(m_event);
             break;
         default:
@@ -329,7 +334,7 @@ void Toaster::stop()
     if (!m_running)
         return;
 
-    m_queue->put_prioritized(tao::ExternalEventWrapper(tao::InternalEvent::evt_stop));
+    m_queue->put_prioritized(tao::IncomingEventWrapper(tao::InternalEvent::evt_stop));
 
     if (m_thread.joinable())
         m_thread.join();
@@ -337,23 +342,22 @@ void Toaster::stop()
     m_queue->clear();
 }
 
-/*
-void Toaster::callback_external_entity_event(const ExternalEntityInfo &event)
+void Toaster::put_external_entity_event(const ExternalEntityEvent &evt)
 {
-   switch (event.type())
-   {
-   case ExternalEntityInfo::Type::door_opened:
-      m_queue->put(tao::ExternalEventWrapper(event));
-      break;
-   case ExternalEntityInfo::Type::door_closed:
-      m_queue->put_prioritized(tao::ExternalEventWrapper(event));
-      break;
-   default:
-      std::cout << "Warning: Toaster trying to handle unexpected event: " << stringify(event) <<
-std::endl; break;
-   }
+    switch (evt.which())
+    {
+        case ExternalEntityEvtType::door_opened:
+        case ExternalEntityEvtType::door_closed:
+            // m_queue->put_prioritized(tao::IncomingEventWrapper(evt));
+            // m_queue->put(tao::IncomingEventWrapper(evt));
+            generic_event_putter(evt);
+            break;
+        default:
+            std::cout << "Warning: Toaster trying to handle unexpected evt: " << stringify(evt)
+                      << std::endl;
+            break;
+    }
 }
-*/
 
 void Toaster::heater_on()
 {

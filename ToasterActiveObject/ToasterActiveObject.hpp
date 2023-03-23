@@ -58,13 +58,15 @@ static const std::vector<std::string> stringfier_StateValue{
 const std::string &stringify(StateValue state);
 std::ostream      &operator<<(std::ostream &os, const tao::StateValue &state);
 
-class ExternalEventWrapper
+class IncomingEventWrapper
 {
    private:
     enum class EventType
     {
         unknown,
+        // Will end up translating from one ExternalEntityEvtType to one tao::InternalEvent
         external_entity_event,
+        // Will end up mapping directly to one of the tao::InternalEvent events
         internal_event,
     };
     struct type_wrapper : public boost::static_visitor<EventType>
@@ -73,20 +75,20 @@ class ExternalEventWrapper
         {
             return EventType::internal_event;
         }
-        EventType operator()(const ExternalEntityInfo & /*obj*/) const
+        EventType operator()(const ExternalEntityEvent & /*obj*/) const
         {
             return EventType::external_entity_event;
         }
     };
-    type_wrapper                                      wrapper;
-    boost::variant<InternalEvent, ExternalEntityInfo> m_event;
-    EventType                                         m_type;
+    type_wrapper                                       wrapper;
+    boost::variant<InternalEvent, ExternalEntityEvent> m_event;
+    EventType                                          m_type;
 
-    tao::InternalEvent map_external_entity_to_internal_event(
-        const ExternalEntityInfo &external_entity_event) const;
+    tao::InternalEvent map_external_entity_event_to_internal_event(
+        const ExternalEntityEvent &external_entity_event) const;
 
    public:
-    ExternalEventWrapper(boost::variant<InternalEvent, ExternalEntityInfo> e)
+    IncomingEventWrapper(boost::variant<InternalEvent, ExternalEntityEvent> e)
         : m_event{e}, m_type{e.apply_visitor(wrapper)}
     {
     }
@@ -200,10 +202,10 @@ class Toaster
     std::shared_ptr<tao::GenericToasterState> m_state;
     tao::StateValue                           m_next_state{tao::StateValue::UNKNOWN};
     DoorStatus                                m_door_status;
-    std::shared_ptr<IThreadSafeQueue<tao::ExternalEventWrapper>> m_queue;
+    std::shared_ptr<IThreadSafeQueue<tao::IncomingEventWrapper>> m_queue;
 
    public:
-    Toaster() : m_queue{std::make_shared<SimplestThreadSafeQueue<tao::ExternalEventWrapper>>()}
+    Toaster() : m_queue{std::make_shared<SimplestThreadSafeQueue<tao::IncomingEventWrapper>>()}
     {
         // load_configs(config);
         set_initial_state(tao::StateValue::STATE_HEATING);
@@ -226,18 +228,22 @@ class Toaster
     void start();
     void stop();
 
-    // void callback_external_entity_event(const ExternalEntityInfo &event);
+    void put_external_entity_event(const ExternalEntityEvent &evt);
+    template <class T>
+    void generic_event_putter(const T &event)
+    {
+        m_queue->put(tao::IncomingEventWrapper(event));
+    }
 
     // Methods related to the specifics of this object type (toaster)
-    void heater_on();
-    void heater_off();
-    void internal_lamp_on();
-    void internal_lamp_off();
-    void arm_time_event(uint32_t time);
-    void arm_time_event(ToastLevel level);
-    void disarm_time_event();
-    void set_target_temperature(float temp);
-
+    void  heater_on();
+    void  heater_off();
+    void  internal_lamp_on();
+    void  internal_lamp_off();
+    void  arm_time_event(uint32_t time);
+    void  arm_time_event(ToastLevel level);
+    void  disarm_time_event();
+    void  set_target_temperature(float temp);
     float check_temp();
     bool  temp_reached();
 
