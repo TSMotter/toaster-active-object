@@ -1,16 +1,29 @@
 # CPP study repository
 
-- Each folder containing a `CMakeLists.txt` file is seen as a stand alone small project that can be compiled and run by itself
+- This is only a study repository!!
+  - Some of the code present in this repository may have been originally written by someone else (either some friend or someone from the internet), and only changed/tweaked by me as a studying exercise!
 
-- To build:
-```bash
-./bbuild.sh <target>
-```
+____
 
-- To build and run:
-```bash
-./bbuild.sh <target> run
-```
-
-- Where "`<target>`" is one of the `Demo` folders
+- Here, "`<target>`" is one of the `Demo` folders
   - Example: `./bbuild.sh DemoActiveObject run`
+
+- To only format:
+  ```bash
+  ./format.sh <target>
+  ```
+
+- To only build:
+  ```bash
+  ./bbuild.sh <target>
+  ```
+
+- To only run:
+  ```bash
+  ./run.sh <target>
+  ```
+
+- To format, build and run:
+  ```bash
+  ./bbuild.sh <target> run
+  ```

@@ -281,8 +281,9 @@ signal_type                                            signal_news_delivery;
 
 int main(int argc, char** argv)
 {
-    /* A slot will automatically disconnect when any of its tracked objects expire. Also, no tracked object expires while the slot it is associated with is in mid-execution.
-    To track a connection, use a shared_pointer and one of ".track" OR ".track_foreign" methods*/
+    /* A slot will automatically disconnect when any of its tracked objects expire. Also, no tracked
+    object expires while the slot it is associated with is in mid-execution. To track a connection,
+    use a shared_pointer and one of ".track" OR ".track_foreign" methods*/
     {
         std::shared_ptr<NewsMessageArea> messageAreaObject = std::make_shared<NewsMessageArea>();
         signal_news_delivery.connect(signal_type::slot_type(&NewsMessageArea::displayNews,
