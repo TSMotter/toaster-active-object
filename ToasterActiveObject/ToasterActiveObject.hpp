@@ -13,6 +13,7 @@
 
 #include "Events.hpp"
 #include "ThreadSafeQueue.hpp"
+#include "BoostDeadlineTimer.hpp"
 
 class Toaster;
 
@@ -93,7 +94,7 @@ class IncomingEventWrapper
     {
     }
 
-    tao::InternalEvent map_external_to_internal_event();
+    tao::InternalEvent map_incoming_event_to_internal_event();
 };
 
 class GenericToasterState
@@ -205,7 +206,14 @@ class Toaster
     std::shared_ptr<IThreadSafeQueue<tao::IncomingEventWrapper>> m_queue;
 
    public:
-    Toaster() : m_queue{std::make_shared<SimplestThreadSafeQueue<tao::IncomingEventWrapper>>()}
+    Toaster()
+        : m_queue{std::make_shared<SimplestThreadSafeQueue<tao::IncomingEventWrapper>>()},
+          m_timer{1000,
+                  [this]() {
+                      m_queue->put_prioritized(
+                          tao::IncomingEventWrapper(tao::InternalEvent::evt_alarm_timeout));
+                  },
+                  false}
     {
         // load_configs(config);
         set_initial_state(tao::StateValue::STATE_HEATING);
@@ -240,7 +248,7 @@ class Toaster
     void  heater_off();
     void  internal_lamp_on();
     void  internal_lamp_off();
-    void  arm_time_event(uint32_t time);
+    void  arm_time_event(long time);
     void  arm_time_event(ToastLevel level);
     void  disarm_time_event();
     void  set_target_temperature(float temp);
@@ -248,9 +256,10 @@ class Toaster
     bool  temp_reached();
 
    private:
-    float       m_temp;
-    float       m_target_temp;
-    std::thread m_thread;
+    float         m_temp;
+    float         m_target_temp;
+    std::thread   m_thread;
+    DeadlineTimer m_timer;
 };
 
 #endif

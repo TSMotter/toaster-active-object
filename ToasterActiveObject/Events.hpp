@@ -10,10 +10,11 @@
 enum class ExternalEntityEvtType
 {
     unknown,
-    trigger_something,
-    door_opened,
-    door_closed,
-    stopped,
+    stop_request,
+    toast_request,
+    bake_request,
+    opening_door,
+    closing_door,
 };
 
 struct ExternalEntityEvent

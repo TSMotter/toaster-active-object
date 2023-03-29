@@ -4,11 +4,11 @@
 
 #include "ThreadSafeQueue.hpp"
 
-std::shared_ptr<spdlog::logger> myLogger = spdlog::stdout_color_mt("console");
+std::shared_ptr<spdlog::logger> myLogger = spdlog::stdout_color_mt("ThreadSafeQueue");
 
 void test_queue()
 {
-    spdlog::set_pattern("[%H:%M:%S %z] [%^%l%$] [thread %t] %v");
+    spdlog::set_pattern("[%H:%M:%S:%e][%n][%^%l%$][thread_id=%t] %v");
     spdlog::set_level(spdlog::level::debug);
 
     std::shared_ptr<IThreadSafeQueue<int>> queue = std::make_shared<SimplestThreadSafeQueue<int>>();

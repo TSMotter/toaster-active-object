@@ -71,7 +71,7 @@ void tao::HeatingSuperState::on_entry()
 {
     std::cout << "HeatingSuperState::on_entry" << std::endl;
     m_toaster->heater_on();
-    m_toaster->arm_time_event(1);
+    m_toaster->arm_time_event(5000);
 }
 
 void tao::HeatingSuperState::unhandled_event(InternalEvent event)
@@ -141,6 +141,7 @@ void tao::ToastingState::on_exit(void)
     std::cout << "ToastingState::on_exit" << std::endl;
     m_toaster->disarm_time_event();
 }
+
 /* *************************************************************************************************
 Implementations of tao::BakingState
 ************************************************************************************************* */
@@ -149,7 +150,7 @@ void tao::BakingState::on_entry(void)
 {
     std::cout << "BakingState::on_entry" << std::endl;
     m_toaster->set_target_temperature(15);
-    m_toaster->arm_time_event(1);
+    m_toaster->arm_time_event(1000);
 }
 
 void tao::BakingState::process_internal_event(InternalEvent event)
@@ -158,6 +159,7 @@ void tao::BakingState::process_internal_event(InternalEvent event)
     switch (event)
     {
         case tao::InternalEvent::evt_alarm_timeout:
+
             if (m_toaster->temp_reached())
             {
                 set_next_state(tao::StateValue::STATE_HEATING);
@@ -213,13 +215,21 @@ Implementations of IncomingEventWrapper
 tao::InternalEvent tao::IncomingEventWrapper::map_external_entity_event_to_internal_event(
     const ExternalEntityEvent &evt) const
 {
-    // Could be a std::map or a std::vector instead of a switch
     switch (evt.which())
     {
-        case ExternalEntityEvtType::door_opened:
+        case ExternalEntityEvtType::stop_request:
+            return tao::InternalEvent::evt_stop;
+            break;
+        case ExternalEntityEvtType::toast_request:
+            return tao::InternalEvent::evt_do_toasting;
+            break;
+        case ExternalEntityEvtType::bake_request:
+            return tao::InternalEvent::evt_do_baking;
+            break;
+        case ExternalEntityEvtType::opening_door:
             return tao::InternalEvent::evt_door_open;
             break;
-        case ExternalEntityEvtType::door_closed:
+        case ExternalEntityEvtType::closing_door:
             return tao::InternalEvent::evt_door_close;
             break;
         default:
@@ -227,9 +237,9 @@ tao::InternalEvent tao::IncomingEventWrapper::map_external_entity_event_to_inter
     }
 }
 
-tao::InternalEvent tao::IncomingEventWrapper::map_external_to_internal_event()
+tao::InternalEvent tao::IncomingEventWrapper::map_incoming_event_to_internal_event()
 {
-    std::cout << "tao::IncomingEventWrapper::map_external_to_internal_event()" << std::endl;
+    std::cout << "tao::IncomingEventWrapper::map_incoming_event_to_internal_event()" << std::endl;
     switch (m_type)
     {
         case tao::IncomingEventWrapper::EventType::external_entity_event:
@@ -284,7 +294,7 @@ void Toaster::transition_state()
 {
     if (m_next_state != tao::StateValue::UNKNOWN)
     {
-        // @TODO Currently, on_exit() is called when switching from a superstate to one substate
+        // #FIXME Currently, on_exit() is called when switching from a superstate to one substate
         m_state->on_exit();
         set_state(m_next_state);
         m_state->on_entry();
@@ -294,7 +304,7 @@ void Toaster::transition_state()
 void Toaster::state_machine_iteration()
 {
     std::cout << "Toaster::state_machine_iteration()" << std::endl;
-    tao::InternalEvent curr_evt = m_queue->wait_and_pop()->map_external_to_internal_event();
+    tao::InternalEvent curr_evt = m_queue->wait_and_pop()->map_incoming_event_to_internal_event();
     m_state->process_internal_event(curr_evt);
     transition_state();
 }
@@ -346,15 +356,18 @@ void Toaster::put_external_entity_event(const ExternalEntityEvent &evt)
 {
     switch (evt.which())
     {
-        case ExternalEntityEvtType::door_opened:
-        case ExternalEntityEvtType::door_closed:
+        case ExternalEntityEvtType::stop_request:
+        case ExternalEntityEvtType::toast_request:
+        case ExternalEntityEvtType::bake_request:
+        case ExternalEntityEvtType::opening_door:
+        case ExternalEntityEvtType::closing_door:
             // m_queue->put_prioritized(tao::IncomingEventWrapper(evt));
             // m_queue->put(tao::IncomingEventWrapper(evt));
             generic_event_putter(evt);
             break;
         default:
-            std::cout << "Warning: Toaster trying to handle unexpected evt: " << stringify(evt)
-                      << std::endl;
+            std::cout << "Warning: Received unhandled event from external entity: "
+                      << stringify(evt) << std::endl;
             break;
     }
 }
@@ -379,19 +392,23 @@ void Toaster::internal_lamp_off()
     std::cout << "Toaster::internal_lamp_off()" << std::endl;
 }
 
-void Toaster::arm_time_event(uint32_t time)
+void Toaster::arm_time_event(long time)
 {
-    std::cout << "Toaster::arm_time_event(uint32_t time)" << std::endl;
+    std::cout << "Toaster::arm_time_event(long time)" << std::endl;
+    m_timer.start(time);
 }
 
 void Toaster::arm_time_event(ToastLevel level)
 {
     std::cout << "Toaster::arm_time_event(ToastLevel level)" << std::endl;
+    long period = static_cast<long>(level) * 1000;
+    m_timer.start(period);
 }
 
 void Toaster::disarm_time_event()
 {
     std::cout << "Toaster::disarm_time_event()" << std::endl;
+    m_timer.stop();
 }
 
 void Toaster::set_target_temperature(float temp)

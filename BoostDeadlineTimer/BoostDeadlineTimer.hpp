@@ -21,6 +21,7 @@ class DeadlineTimer
 
     void start();
     void start(long T);
+    void start(long T, bool cyclic);
     void stop();
 
    private:

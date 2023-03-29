@@ -12,8 +12,8 @@ class MyCoolLogger
    public:
     MyCoolLogger()
     {
-        m_logger = spdlog::stdout_color_mt("console");
-        spdlog::set_pattern("[%H:%M:%S:%e] [%^%l%$] [thread_id=%t] %v");
+        m_logger = spdlog::stdout_color_mt("BoostDeadlineTimer");
+        spdlog::set_pattern("[%H:%M:%S:%e][%n][%^%l%$][thread_id=%t] %v");
         spdlog::set_level(spdlog::level::debug);
     }
 
@@ -52,7 +52,7 @@ class MyCoolLogger
 
 static MyCoolLogger myLocalLogger{};
 
-DeadlineTimer::DeadlineTimer(long T, std::function<void(void)> cb, bool cyclic = false)
+DeadlineTimer::DeadlineTimer(long T, std::function<void(void)> cb, bool cyclic)
     : m_service{std::make_shared<boost::asio::io_service>()},
       m_worker{std::unique_ptr<boost::asio::io_service::work>(
           new boost::asio::io_service::work{*m_service})},
@@ -91,6 +91,17 @@ void DeadlineTimer::start(long T)
 {
     myLocalLogger.Logdebug("[void start(long T)]");
     m_period = T;
+    m_timer.expires_from_now(boost::posix_time::milliseconds(m_period));
+    m_timer.async_wait(
+        boost::bind(&DeadlineTimer::callback, this, boost::asio::placeholders::error));
+    m_status = Status::running;
+}
+
+void DeadlineTimer::start(long T, bool cyclic)
+{
+    myLocalLogger.Logdebug("[void start(long T)]");
+    m_period = T;
+    m_cyclic = cyclic;
     m_timer.expires_from_now(boost::posix_time::milliseconds(m_period));
     m_timer.async_wait(
         boost::bind(&DeadlineTimer::callback, this, boost::asio::placeholders::error));

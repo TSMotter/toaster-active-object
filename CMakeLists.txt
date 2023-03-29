@@ -3,7 +3,6 @@ project(my_cpp)
 
 set(CMAKE_CXX_STANDARD 14)
 
-
 # Variable TARGET_GROUP should be passed as an argument when calling cmake
 set(TARGET_GROUP helloworld CACHE STRING "Specify the TARGET_GROUP?")
 
@@ -14,6 +13,7 @@ elseif(TARGET_GROUP STREQUAL DemoActiveObject)
 elseif(TARGET_GROUP STREQUAL DemoToasterActiveObject)
   add_subdirectory(ThreadSafeQueue)
   add_subdirectory(ToasterActiveObject)
+  add_subdirectory(BoostDeadlineTimer)
 elseif(TARGET_GROUP STREQUAL DemoBoostDeadlineTimer)
   add_subdirectory(BoostDeadlineTimer)
 endif()

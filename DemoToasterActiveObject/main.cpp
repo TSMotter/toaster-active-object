@@ -30,11 +30,10 @@ int main(int argc, char **argv)
 
     while (true)
     {
-        toaster->put_external_entity_event(ExternalEntityEvtType::door_closed);
-        std::this_thread::sleep_for(std::chrono::seconds(2));
+        int k = 0;
+        std::cin >> k;
         std::cout << "---------------------------" << std::endl;
-        toaster->put_external_entity_event(ExternalEntityEvtType::door_opened);
-        std::this_thread::sleep_for(std::chrono::seconds(2));
+        toaster->put_external_entity_event(static_cast<ExternalEntityEvtType>(k));
         std::cout << "---------------------------" << std::endl;
     }
 
