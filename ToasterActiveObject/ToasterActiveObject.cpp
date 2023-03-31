@@ -71,18 +71,12 @@ void tao::HeatingSuperState::on_entry()
 {
     std::cout << "HeatingSuperState::on_entry" << std::endl;
     m_toaster->heater_on();
-    m_toaster->arm_time_event(5000);
 }
 
 void tao::HeatingSuperState::unhandled_event(InternalEvent event)
 {
     std::cout << "HeatingSuperState::unhandled_event: " << stringify(event) << std::endl;
-    switch (event)
-    {
-        default:
-            tao::GenericToasterState::unhandled_event(event);
-            break;
-    }
+    tao::GenericToasterState::unhandled_event(event);
 }
 
 void tao::HeatingSuperState::process_internal_event(InternalEvent event)
@@ -96,9 +90,6 @@ void tao::HeatingSuperState::process_internal_event(InternalEvent event)
         case tao::InternalEvent::evt_do_baking:
             set_next_state(tao::StateValue::STATE_BAKING);
             break;
-        case tao::InternalEvent::evt_alarm_timeout:
-            m_toaster->check_temp();
-            break;
         default:
             tao::GenericToasterState::unhandled_event(event);
             break;
@@ -109,7 +100,6 @@ void tao::HeatingSuperState::on_exit()
 {
     std::cout << "HeatingSuperState::on_exit" << std::endl;
     m_toaster->heater_off();
-    m_toaster->disarm_time_event();
 }
 
 /* *************************************************************************************************
@@ -119,6 +109,7 @@ Implementations of tao::ToastingState
 void tao::ToastingState::on_entry(void)
 {
     std::cout << "ToastingState::on_entry" << std::endl;
+    m_toaster->heater_on();  // #FIXME-01: This might be removed if FIXME01 is fixed
     m_toaster->arm_time_event(Toaster::ToastLevel::slightly_overcooked_toast);
 }
 
@@ -139,6 +130,7 @@ void tao::ToastingState::process_internal_event(InternalEvent event)
 void tao::ToastingState::on_exit(void)
 {
     std::cout << "ToastingState::on_exit" << std::endl;
+    m_toaster->heater_off();  // #FIXME-01: This might be removed if FIXME01 is fixed
     m_toaster->disarm_time_event();
 }
 
@@ -149,8 +141,8 @@ Implementations of tao::BakingState
 void tao::BakingState::on_entry(void)
 {
     std::cout << "BakingState::on_entry" << std::endl;
-    m_toaster->set_target_temperature(15);
-    m_toaster->arm_time_event(1000);
+    m_toaster->heater_on();                 // #FIXME-01: This might be removed if FIXME01 is fixed
+    m_toaster->set_target_temperature(50);  // FIXME-03: The temp should not be hardcoded
 }
 
 void tao::BakingState::process_internal_event(InternalEvent event)
@@ -159,11 +151,11 @@ void tao::BakingState::process_internal_event(InternalEvent event)
     switch (event)
     {
         case tao::InternalEvent::evt_alarm_timeout:
-
-            if (m_toaster->temp_reached())
-            {
-                set_next_state(tao::StateValue::STATE_HEATING);
-            }
+            set_next_state(tao::StateValue::STATE_HEATING);
+            break;
+        case tao::InternalEvent::evt_target_temp_reached:
+            // #FIXME-02: The timeout should not be hardcoded
+            m_toaster->arm_time_event(10000);
             break;
         default:
             HeatingSuperState::unhandled_event(event);
@@ -174,7 +166,8 @@ void tao::BakingState::process_internal_event(InternalEvent event)
 void tao::BakingState::on_exit(void)
 {
     std::cout << "BakingState::on_exit" << std::endl;
-    m_toaster->set_target_temperature(0);
+    m_toaster->unset_target_temperature();
+    m_toaster->heater_off();  // #FIXME-01: This might be removed if FIXME01 is fixed
     m_toaster->disarm_time_event();
 }
 
@@ -190,16 +183,7 @@ void tao::DoorOpenState::on_entry()
 void tao::DoorOpenState::process_internal_event(InternalEvent event)
 {
     std::cout << "DoorOpenState::process_internal_event: " << stringify(event) << std::endl;
-    switch (event)
-    {
-        case tao::InternalEvent::evt_door_close:
-            m_toaster->m_door_status = Toaster::DoorStatus::closed;
-            set_next_state(tao::StateValue::STATE_HEATING);
-            break;
-        default:
-            tao::GenericToasterState::unhandled_event(event);
-            break;
-    }
+    tao::GenericToasterState::unhandled_event(event);
 }
 
 void tao::DoorOpenState::on_exit()
@@ -294,7 +278,10 @@ void Toaster::transition_state()
 {
     if (m_next_state != tao::StateValue::UNKNOWN)
     {
-        // #FIXME Currently, on_exit() is called when switching from a superstate to one substate
+        /* #FIXME-01: Currently, on_exit() is called when switching from a superstate to one
+         * substate. Ex: When going from Heating to Toasting, Heating exit is executed even though
+         * Toasting is withing Heating. This promotes some non wanted behavior like: Heating ->
+         * Toasting would turn off the heater because of Heating.on_exit() */
         m_state->on_exit();
         set_state(m_next_state);
         m_state->on_entry();
@@ -375,11 +362,13 @@ void Toaster::put_external_entity_event(const ExternalEntityEvent &evt)
 void Toaster::heater_on()
 {
     std::cout << "Toaster::heater_on()" << std::endl;
+    m_heater.turn_on();
 }
 
 void Toaster::heater_off()
 {
     std::cout << "Toaster::heater_off()" << std::endl;
+    m_heater.turn_off();
 }
 
 void Toaster::internal_lamp_on()
@@ -401,7 +390,7 @@ void Toaster::arm_time_event(long time)
 void Toaster::arm_time_event(ToastLevel level)
 {
     std::cout << "Toaster::arm_time_event(ToastLevel level)" << std::endl;
-    long period = static_cast<long>(level) * 1000;
+    long period = static_cast<long>(level) * 2000;  // Arbitrary hardcoded value
     m_timer.start(period);
 }
 
@@ -413,19 +402,12 @@ void Toaster::disarm_time_event()
 
 void Toaster::set_target_temperature(float temp)
 {
-    m_target_temp = temp;
-    std::cout << "Toaster::set_target_temperature(float temp) - " << m_target_temp << std::endl;
+    m_temp_sensor.set_target_temp(temp);
+    std::cout << "Toaster::set_target_temperature(float temp) - " << temp << std::endl;
 }
 
-float Toaster::check_temp()
+void Toaster::unset_target_temperature()
 {
-    m_temp++;
-    std::cout << "Toaster::check_temp() - " << m_temp << std::endl;
-    return m_temp;
-}
-
-bool Toaster::temp_reached()
-{
-    std::cout << "Toaster::temp_reached()" << std::endl;
-    return (check_temp() >= m_target_temp);
+    m_temp_sensor.unset_target_temp();
+    std::cout << "Toaster::unset_target_temperature()" << std::endl;
 }

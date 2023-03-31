@@ -14,7 +14,7 @@ class MyCoolLogger
     {
         m_logger = spdlog::stdout_color_mt("BoostDeadlineTimer");
         spdlog::set_pattern("[%H:%M:%S:%e][%n][%^%l%$][thread_id=%t] %v");
-        spdlog::set_level(spdlog::level::debug);
+        spdlog::set_level(spdlog::level::info);
     }
 
     void Logdebug(const std::string &str)

@@ -25,8 +25,9 @@ enum class InternalEvent
     unknown,
     evt_stop,
     evt_do_toasting,
-    evt_alarm_timeout,
     evt_do_baking,
+    evt_alarm_timeout,
+    evt_target_temp_reached,
     evt_door_open,
     evt_door_close,
     evt_max,
@@ -36,8 +37,9 @@ static const std::map<int, std::string> stringfier_InternalEvent{
     {static_cast<int>(InternalEvent::unknown), "unknown"},
     {static_cast<int>(InternalEvent::evt_stop), "evt_stop"},
     {static_cast<int>(InternalEvent::evt_do_toasting), "evt_do_toasting"},
-    {static_cast<int>(InternalEvent::evt_alarm_timeout), "evt_alarm_timeout"},
     {static_cast<int>(InternalEvent::evt_do_baking), "evt_do_baking"},
+    {static_cast<int>(InternalEvent::evt_alarm_timeout), "evt_alarm_timeout"},
+    {static_cast<int>(InternalEvent::evt_target_temp_reached), "evt_target_temp_reached"},
     {static_cast<int>(InternalEvent::evt_door_open), "evt_door_open"},
     {static_cast<int>(InternalEvent::evt_door_close), "evt_door_close"},
 };
@@ -180,6 +182,142 @@ class DoorOpenState : public GenericToasterState
 };
 }  // namespace tao
 
+#define AMBIENT_TEMP 25.0
+#define MAX_TEMP 80.0
+#define MOCKED_OBJECTS_TIMER_PERIOD 1000
+
+class Heater
+{
+   public:
+    enum class Status
+    {
+        On,
+        Off
+    };
+
+   public:
+    const float &temperature;
+
+   public:
+    Heater()
+        : m_status(Status::Off),
+          m_temp(AMBIENT_TEMP),
+          m_heater_timer{MOCKED_OBJECTS_TIMER_PERIOD, boost::bind(&Heater::callback, this), true},
+          temperature(m_temp)
+    {
+        m_heater_timer.start();
+    }
+
+    void turn_on()
+    {
+        std::cout << "Heater::turn_on()" << std::endl;
+        m_status = Status::On;
+        // hal_method_to_turn_relay_on(); // Abstracted in this example
+    }
+
+    void turn_off()
+    {
+        std::cout << "Heater::turn_off()" << std::endl;
+        m_status = Status::Off;
+        // hal_method_to_turn_relay_off(); // Abstracted in this example
+    }
+
+   private:
+    /* In real world, it wouldn't make sense to manually increment/decrement the temperature. It's
+     * just here for the sake of the example making sense */
+    void callback()
+    {
+        if (m_status == Status::On)
+        {
+            m_temp++;
+        }
+        else if (m_status == Status::Off && m_temp > AMBIENT_TEMP)
+        {
+            m_temp--;
+        }
+    }
+
+   private:
+    float         m_temp;
+    Status        m_status;
+    DeadlineTimer m_heater_timer;
+};
+
+// FIXME-05: Is templating here the best approach? How to enforce the need for the specialization
+// class to have specific methods? (ie: a method called turn_on())
+template <class T>
+class TempSensor
+{
+   public:
+    struct target_temp_t
+    {
+        float temp;
+        bool  is_set;
+    };
+
+   public:
+    TempSensor()
+        : m_sensor_timer{MOCKED_OBJECTS_TIMER_PERIOD, boost::bind(&TempSensor::callback, this),
+                         true}
+    {
+        m_sensor_timer.start();
+    }
+    float temp()
+    {
+        return m_curr_temp;
+    }
+    void set_target_temp(float temp_to_set_as_target)
+    {
+        m_target.temp   = temp_to_set_as_target;
+        m_target.is_set = true;
+    }
+    void unset_target_temp()
+    {
+        m_target.is_set = false;
+    }
+    bool reached()
+    {
+        return (m_target.is_set && temp_within_target_range(2.0));
+    }
+
+   private:
+    void callback()
+    {
+        std::cout << "TempSensor::callback - " << m_curr_temp << std::endl;
+
+        // hal_method_to_read_sensor_temperature(); // Abstracted in this example
+        m_curr_temp = m_actuator.temperature;
+
+        if (reached())
+        {
+            // #FIXME-04: Figure out how to send event back up saying that target temp is reached
+        }
+
+        /* Supposedly, the actuator (heater) is not conscious about it's own temperature. The sensor
+        is responsible for checking whether the actuator (heater) should be turned on or off based
+        on the current temperature and the limits */
+        if (m_curr_temp > MAX_TEMP || reached())
+        {
+            m_actuator.turn_off();
+        }
+        else
+        {
+            m_actuator.turn_on();
+        }
+    }
+
+    bool temp_within_target_range(float range)
+    {
+        return ((m_curr_temp > m_target.temp - range) && (m_curr_temp < m_target.temp + range));
+    }
+
+   private:
+    T             m_actuator;
+    float         m_curr_temp;
+    target_temp_t m_target;
+    DeadlineTimer m_sensor_timer;
+};
+
 class Toaster
 {
    public:
@@ -199,6 +337,7 @@ class Toaster
         charcoal,
     };
 
+   public:
     bool                                      m_running{false};
     std::shared_ptr<tao::GenericToasterState> m_state;
     tao::StateValue                           m_next_state{tao::StateValue::UNKNOWN};
@@ -223,7 +362,6 @@ class Toaster
         stop();
         m_queue->clear();
     }
-
     // Methods related to the general operation of any object of this architecture
     void set_next_state(tao::StateValue new_state);
     void set_state(tao::StateValue new_state);
@@ -244,22 +382,22 @@ class Toaster
     }
 
     // Methods related to the specifics of this object type (toaster)
-    void  heater_on();
-    void  heater_off();
-    void  internal_lamp_on();
-    void  internal_lamp_off();
-    void  arm_time_event(long time);
-    void  arm_time_event(ToastLevel level);
-    void  disarm_time_event();
-    void  set_target_temperature(float temp);
-    float check_temp();
-    bool  temp_reached();
+    void heater_on();
+    void heater_off();
+    void internal_lamp_on();
+    void internal_lamp_off();
+    void arm_time_event(long time);
+    void arm_time_event(ToastLevel level);
+    void disarm_time_event();
+    void set_target_temperature(float temp);
+    void unset_target_temperature();
 
    private:
-    float         m_temp;
-    float         m_target_temp;
-    std::thread   m_thread;
-    DeadlineTimer m_timer;
+    Heater             m_heater;
+    TempSensor<Heater> m_temp_sensor;
+    float              m_target_temp;
+    std::thread        m_thread;
+    DeadlineTimer      m_timer;
 };
 
 #endif
