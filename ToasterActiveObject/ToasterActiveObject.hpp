@@ -28,6 +28,8 @@ enum class InternalEvent
     evt_do_baking,
     evt_alarm_timeout,
     evt_target_temp_reached,
+    evt_temp_below_target,
+    evt_temp_above_target,
     evt_door_open,
     evt_door_close,
     evt_max,
@@ -40,6 +42,8 @@ static const std::map<int, std::string> stringfier_InternalEvent{
     {static_cast<int>(InternalEvent::evt_do_baking), "evt_do_baking"},
     {static_cast<int>(InternalEvent::evt_alarm_timeout), "evt_alarm_timeout"},
     {static_cast<int>(InternalEvent::evt_target_temp_reached), "evt_target_temp_reached"},
+    {static_cast<int>(InternalEvent::evt_temp_below_target), "evt_temp_below_target"},
+    {static_cast<int>(InternalEvent::evt_temp_above_target), "evt_temp_above_target"},
     {static_cast<int>(InternalEvent::evt_door_open), "evt_door_open"},
     {static_cast<int>(InternalEvent::evt_door_close), "evt_door_close"},
 };
@@ -204,16 +208,10 @@ class Heater
     };
 
    public:
-    // This public constant reference to a float makes it so that the temperature can be accessed
-    // from the outside as if it was a read-only attribute
-    const float &temperature;
-
-   public:
     Heater()
         : m_status(Status::Off),
           m_temp(AMBIENT_TEMP),
-          m_heater_timer{MOCKED_OBJECTS_TIMER_PERIOD, boost::bind(&Heater::callback, this), true},
-          temperature(m_temp)
+          m_heater_timer{MOCKED_OBJECTS_TIMER_PERIOD, boost::bind(&Heater::callback, this), true}
     {
         m_heater_timer.start();
     }
@@ -222,19 +220,25 @@ class Heater
     {
         std::cout << "Heater::turn_on()" << std::endl;
         m_status = Status::On;
-        // hal_method_to_turn_relay_on(); // Abstracted in this example
+        // hal_method_to_turn_relay_on(); // Something like this would be done in the real world
     }
 
     void turn_off()
     {
         std::cout << "Heater::turn_off()" << std::endl;
         m_status = Status::Off;
-        // hal_method_to_turn_relay_off(); // Abstracted in this example
+        // hal_method_to_turn_relay_off(); // Something like this would be done in the real world
+    }
+
+    float temperature()
+    {
+        // hal_method_to_read_temperature(); // Something like this would be done in the real world
+        return m_temp;
     }
 
    private:
-    /* In real world, it wouldn't make sense to manually increment/decrement the temperature. It's
-     * just here for the sake of the example making sense */
+    /* In the real world, it wouldn't make sense to manually increment/decrement the temperature.
+     * It's just here for the sake of the example making sense */
     void callback()
     {
         if (m_status == Status::On)
@@ -248,6 +252,8 @@ class Heater
     }
 
    private:
+    /* In the real world, the actuator itself wouldn't be concious of it's own temperature. It's
+     * just here for the sake of the example making sense */
     float         m_temp;
     Status        m_status;
     DeadlineTimer m_heater_timer;
@@ -265,8 +271,7 @@ struct ActuatorIsValidForTempSensor
     Here, the "->" is a syntax used in C++ to declare the return type of a function. It is called a
     trailing return type. */
     template <typename U>
-    static auto test(int) -> decltype(std::declval<U>().turn_on(), std::declval<U>().turn_off(),
-                                      std::declval<U>().temperature, std::true_type());
+    static auto test(int) -> decltype(std::declval<U>().temperature(), std::true_type());
 
     /* The (...) is a syntax used in C++ to declare a variadic function template argument. It allows
     you to declare a function template that can take a variable number of arguments of any type.
@@ -290,38 +295,32 @@ class TempSensor
     static_assert(
         ActuatorIsValidForTempSensor<T>::value,
         "The class used for specialization of TempSensor does not match the requirements");
+
     using signal_t = boost::signals2::signal<void(const TempSensorEvent &evt)>;
 
    public:
-    struct target_temp_t
-    {
-        float temp;
-        bool  is_set;
-    };
+    /* This public constant reference to a float makes it so that the temperature can be accessed
+    from the outside as if it was a read-only attribute */
+    const float &temperature;
 
    public:
-    TempSensor()
-        : m_sensor_timer{MOCKED_OBJECTS_TIMER_PERIOD, boost::bind(&TempSensor::callback, this),
-                         true}
+    TempSensor(std::shared_ptr<T> act, float error = 2.0f)
+        : m_actuator(act),
+          m_error(error),
+          m_sensor_timer{MOCKED_OBJECTS_TIMER_PERIOD, boost::bind(&TempSensor::callback, this),
+                         true},
+          m_target_temp(MAX_TEMP),
+          temperature(m_curr_temp)
     {
         m_sensor_timer.start();
     }
-    float temp()
-    {
-        return m_curr_temp;
-    }
     void set_target_temp(float temp_to_set_as_target)
     {
-        m_target.temp   = temp_to_set_as_target;
-        m_target.is_set = true;
+        m_target_temp = temp_to_set_as_target;
     }
     void unset_target_temp()
     {
-        m_target.is_set = false;
-    }
-    bool reached()
-    {
-        return (m_target.is_set && temp_within_target_range(2.0));
+        m_target_temp = MAX_TEMP;
     }
     template <typename F>
     void register_callback(F &&handler)
@@ -335,46 +334,35 @@ class TempSensor
         std::cout << "TempSensor::callback - " << m_curr_temp << std::endl;
 
         // hal_method_to_read_sensor_temperature(); // Abstracted in this example
-        m_curr_temp = m_actuator.temperature;
+        m_curr_temp = m_actuator->temperature();
 
-        if (reached())
+        if ((m_curr_temp > m_target_temp - m_error) && (m_curr_temp < m_target_temp + m_error))
         {
-            publish_event();
+            publish_event(TempSensorEvent{TempSensorEvtType::target_temp_reached});
         }
-
-        /* Supposedly, the actuator (heater) is not conscious about it's own temperature. The sensor
-        is responsible for checking whether the actuator (heater) should be turned on or off based
-        on the current temperature and the limits */
-        if (m_curr_temp > MAX_TEMP || reached() || (m_target.is_set && m_curr_temp > m_target.temp))
+        else if (m_curr_temp > m_target_temp - m_error)
         {
-            /* TODO: Issue#8 - Sensor should not be responsible for turning on/off the actuator, rather,
-            it should publish events and let main "Toaster" object decide the actions */
-            m_actuator.turn_off();
+            publish_event(TempSensorEvent{TempSensorEvtType::temp_above_target});
         }
-        else
+        else if (m_curr_temp < m_target_temp + m_error)
         {
-            /* TODO: Issue#8 */
-            m_actuator.turn_on();
+            publish_event(TempSensorEvent{TempSensorEvtType::temp_below_target});
         }
     }
 
     // -> Method publish (emit) the signal
-    void publish_event()
+    void publish_event(const TempSensorEvent &evt)
     {
-        m_signal(TempSensorEvent{TempSensorEvtType::target_temp_reached});
-    }
-
-    bool temp_within_target_range(float range)
-    {
-        return ((m_curr_temp > m_target.temp - range) && (m_curr_temp < m_target.temp + range));
+        m_signal(evt);
     }
 
    private:
-    signal_t      m_signal;
-    T             m_actuator;
-    float         m_curr_temp;
-    target_temp_t m_target;
-    DeadlineTimer m_sensor_timer;
+    signal_t           m_signal;
+    std::shared_ptr<T> m_actuator;
+    float              m_curr_temp;
+    float              m_error;
+    float              m_target_temp;
+    DeadlineTimer      m_sensor_timer;
 };
 
 /* TODO: Issue#7 - Implement unit tests for Toaster*/
@@ -408,7 +396,7 @@ class Toaster
     Toaster()
         : m_queue{std::make_shared<SimplestThreadSafeQueue<tao::IncomingEventWrapper>>()},
           m_heater{std::make_shared<Heater>()},
-          m_temp_sensor{std::make_shared<TempSensor<Heater>>()},
+          m_temp_sensor{std::make_shared<TempSensor<Heater>>(m_heater, 2.0f)},
           m_timer{1000,
                   [this]() {
                       m_queue->put_prioritized(

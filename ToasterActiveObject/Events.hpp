@@ -48,11 +48,15 @@ TempSensor
 enum class TempSensorEvtType
 {
     unknown,
-    target_temp_reached
+    target_temp_reached,
+    temp_below_target,
+    temp_above_target
 };
 static const std::map<TempSensorEvtType, std::string> stringifier_map_temp_sensor_evt{
     {TempSensorEvtType::unknown, "TempSensorEvtType::unknown"},
-    {TempSensorEvtType::target_temp_reached, "TempSensorEvtType::target_temp_reached"}};
+    {TempSensorEvtType::target_temp_reached, "TempSensorEvtType::target_temp_reached"},
+    {TempSensorEvtType::temp_below_target, "TempSensorEvtType::temp_below_target"},
+    {TempSensorEvtType::temp_above_target, "TempSensorEvtType::temp_above_target"}};
 
 struct TempSensorEvent
 {
