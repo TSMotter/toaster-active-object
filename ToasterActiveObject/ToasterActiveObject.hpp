@@ -243,8 +243,7 @@ class Heater
     DeadlineTimer m_heater_timer;
 };
 
-// FIXME-05: Is templating here the best approach? How to enforce the need for the specialization
-// class to have specific methods? (ie: a method called turn_on())
+/* TODO: Issue#6 */
 template <class T>
 class TempSensor
 {
@@ -290,7 +289,7 @@ class TempSensor
 
         if (reached())
         {
-            // #FIXME-04: Figure out how to send event back up saying that target temp is reached
+            /* TODO: Issue#5 */
         }
 
         /* Supposedly, the actuator (heater) is not conscious about it's own temperature. The sensor

@@ -109,7 +109,7 @@ Implementations of tao::ToastingState
 void tao::ToastingState::on_entry(void)
 {
     std::cout << "ToastingState::on_entry" << std::endl;
-    m_toaster->heater_on();  // #FIXME-01: This might be removed if FIXME01 is fixed
+    m_toaster->heater_on();  /* TODO: This might be removed if Issue#2 is fixed */
     m_toaster->arm_time_event(Toaster::ToastLevel::slightly_overcooked_toast);
 }
 
@@ -130,7 +130,7 @@ void tao::ToastingState::process_internal_event(InternalEvent event)
 void tao::ToastingState::on_exit(void)
 {
     std::cout << "ToastingState::on_exit" << std::endl;
-    m_toaster->heater_off();  // #FIXME-01: This might be removed if FIXME01 is fixed
+    m_toaster->heater_off();  /* TODO: This might be removed if Issue#2 is fixed */
     m_toaster->disarm_time_event();
 }
 
@@ -141,8 +141,8 @@ Implementations of tao::BakingState
 void tao::BakingState::on_entry(void)
 {
     std::cout << "BakingState::on_entry" << std::endl;
-    m_toaster->heater_on();                 // #FIXME-01: This might be removed if FIXME01 is fixed
-    m_toaster->set_target_temperature(50);  // FIXME-03: The temp should not be hardcoded
+    m_toaster->heater_on();                 /* TODO: This might be removed if Issue#2 is fixed */
+    m_toaster->set_target_temperature(50);  /* TODO: Issue#4 */
 }
 
 void tao::BakingState::process_internal_event(InternalEvent event)
@@ -154,7 +154,7 @@ void tao::BakingState::process_internal_event(InternalEvent event)
             set_next_state(tao::StateValue::STATE_HEATING);
             break;
         case tao::InternalEvent::evt_target_temp_reached:
-            // #FIXME-02: The timeout should not be hardcoded
+            /* TODO: Issue#3 */
             m_toaster->arm_time_event(10000);
             break;
         default:
@@ -167,7 +167,7 @@ void tao::BakingState::on_exit(void)
 {
     std::cout << "BakingState::on_exit" << std::endl;
     m_toaster->unset_target_temperature();
-    m_toaster->heater_off();  // #FIXME-01: This might be removed if FIXME01 is fixed
+    m_toaster->heater_off();  /* TODO: This might be removed if Issue#2 is fixed */
     m_toaster->disarm_time_event();
 }
 
@@ -278,10 +278,7 @@ void Toaster::transition_state()
 {
     if (m_next_state != tao::StateValue::UNKNOWN)
     {
-        /* #FIXME-01: Currently, on_exit() is called when switching from a superstate to one
-         * substate. Ex: When going from Heating to Toasting, Heating exit is executed even though
-         * Toasting is withing Heating. This promotes some non wanted behavior like: Heating ->
-         * Toasting would turn off the heater because of Heating.on_exit() */
+        /* TODO: Issue#2 */
         m_state->on_exit();
         set_state(m_next_state);
         m_state->on_entry();
