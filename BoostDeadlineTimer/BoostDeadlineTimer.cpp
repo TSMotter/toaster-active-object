@@ -115,6 +115,12 @@ void DeadlineTimer::stop()
     m_timer.cancel();
 }
 
+DeadlineTimer::Status DeadlineTimer::status()
+{
+    myLocalLogger.Logdebug("[DeadlineTimer::Status status()]");
+    return m_status;
+}
+
 void DeadlineTimer::io_context_runner()
 {
     myLocalLogger.Logdebug("[io_context_runner()]");
@@ -135,5 +141,9 @@ void DeadlineTimer::callback(const boost::system::error_code &err)
     if (m_cyclic && m_status == Status::running)
     {
         start();
+    }
+    else
+    {
+        m_status == Status::stopped;
     }
 }

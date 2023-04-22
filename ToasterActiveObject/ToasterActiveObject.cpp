@@ -76,6 +76,7 @@ Implementations of tao::HeatingSuperState
 void tao::HeatingSuperState::on_entry()
 {
     std::cout << "HeatingSuperState::on_entry" << std::endl;
+    m_toaster->set_target_temperature(MAX_TEMP);
     m_toaster->heater_on();
 }
 
@@ -105,6 +106,7 @@ void tao::HeatingSuperState::process_internal_event(InternalEvent event)
 void tao::HeatingSuperState::on_exit()
 {
     std::cout << "HeatingSuperState::on_exit" << std::endl;
+    m_toaster->set_target_temperature(AMBIENT_TEMP);
     m_toaster->heater_off();
 }
 
@@ -115,6 +117,7 @@ Implementations of tao::ToastingState
 void tao::ToastingState::on_entry(void)
 {
     std::cout << "ToastingState::on_entry" << std::endl;
+    m_toaster->set_target_temperature(MAX_TEMP);
     m_toaster->heater_on(); /* TODO: This might be removed if Issue#2 is fixed */
     m_toaster->arm_time_event(Toaster::ToastLevel::slightly_overcooked_toast);
 }
@@ -136,6 +139,7 @@ void tao::ToastingState::process_internal_event(InternalEvent event)
 void tao::ToastingState::on_exit(void)
 {
     std::cout << "ToastingState::on_exit" << std::endl;
+    m_toaster->set_target_temperature(AMBIENT_TEMP);
     m_toaster->heater_off(); /* TODO: This might be removed if Issue#2 is fixed */
     m_toaster->disarm_time_event();
 }
@@ -147,8 +151,8 @@ Implementations of tao::BakingState
 void tao::BakingState::on_entry(void)
 {
     std::cout << "BakingState::on_entry" << std::endl;
-    m_toaster->heater_on();                /* TODO: This might be removed if Issue#2 is fixed */
     m_toaster->set_target_temperature(50); /* TODO: Issue#4 */
+    m_toaster->heater_on();                /* TODO: This might be removed if Issue#2 is fixed */
 }
 
 void tao::BakingState::process_internal_event(InternalEvent event)
@@ -160,7 +164,6 @@ void tao::BakingState::process_internal_event(InternalEvent event)
             set_next_state(tao::StateValue::STATE_HEATING);
             break;
         case tao::InternalEvent::evt_target_temp_reached:
-            m_toaster->unset_target_temperature();
             /* TODO: Issue#3 */
             m_toaster->arm_time_event(10000);
             break;
@@ -173,7 +176,7 @@ void tao::BakingState::process_internal_event(InternalEvent event)
 void tao::BakingState::on_exit(void)
 {
     std::cout << "BakingState::on_exit" << std::endl;
-    m_toaster->unset_target_temperature();
+    m_toaster->set_target_temperature(AMBIENT_TEMP);
     m_toaster->heater_off(); /* TODO: This might be removed if Issue#2 is fixed */
     m_toaster->disarm_time_event();
 }
@@ -426,6 +429,10 @@ void Toaster::internal_lamp_off()
 
 void Toaster::arm_time_event(long time)
 {
+    if(m_timer.status() == DeadlineTimer::Status::running)
+    {
+        return;
+    }
     std::cout << "Toaster::arm_time_event(long time)" << std::endl;
     m_timer.start(time);
 }
@@ -447,10 +454,4 @@ void Toaster::set_target_temperature(float temp)
 {
     m_temp_sensor->set_target_temp(temp);
     std::cout << "Toaster::set_target_temperature(float temp) - " << temp << std::endl;
-}
-
-void Toaster::unset_target_temperature()
-{
-    m_temp_sensor->unset_target_temp();
-    std::cout << "Toaster::unset_target_temperature()" << std::endl;
 }

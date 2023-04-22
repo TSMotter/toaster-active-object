@@ -23,6 +23,7 @@ class DeadlineTimer
     void start(long T);
     void start(long T, bool cyclic);
     void stop();
+    Status status();
 
    private:
     void io_context_runner();

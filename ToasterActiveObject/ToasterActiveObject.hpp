@@ -309,7 +309,7 @@ class TempSensor
           m_error(error),
           m_sensor_timer{MOCKED_OBJECTS_TIMER_PERIOD, boost::bind(&TempSensor::callback, this),
                          true},
-          m_target_temp(MAX_TEMP),
+          m_target_temp(AMBIENT_TEMP),
           temperature(m_curr_temp)
     {
         m_sensor_timer.start();
@@ -317,10 +317,6 @@ class TempSensor
     void set_target_temp(float temp_to_set_as_target)
     {
         m_target_temp = temp_to_set_as_target;
-    }
-    void unset_target_temp()
-    {
-        m_target_temp = MAX_TEMP;
     }
     template <typename F>
     void register_callback(F &&handler)
@@ -331,7 +327,7 @@ class TempSensor
    private:
     void callback()
     {
-        std::cout << "TempSensor::callback - " << m_curr_temp << std::endl;
+        std::cout << "TempSensor::callback - " << m_curr_temp << "/" << m_target_temp << std::endl;
 
         // hal_method_to_read_sensor_temperature(); // Abstracted in this example
         m_curr_temp = m_actuator->temperature();
@@ -444,7 +440,6 @@ class Toaster
     void arm_time_event(ToastLevel level);
     void disarm_time_event();
     void set_target_temperature(float temp);
-    void unset_target_temperature();
 
    private:
     std::shared_ptr<Heater>             m_heater;
