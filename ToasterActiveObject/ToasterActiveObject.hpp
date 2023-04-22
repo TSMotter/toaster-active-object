@@ -204,6 +204,8 @@ class Heater
     };
 
    public:
+    // This public constant reference to a float makes it so that the temperature can be accessed
+    // from the outside as if it was a read-only attribute
     const float &temperature;
 
    public:
@@ -251,10 +253,43 @@ class Heater
     DeadlineTimer m_heater_timer;
 };
 
-/* TODO: Issue#6 */
+/* SFINAE (Substitution Failure Is Not An Error) is a technique in C++ to enforce that the class
+used for specialization of a template in fact has the required methods and members.
+
+Here is the definition of a helper struct that has a template function that checks if the given type
+T has all the required methods and members */
+template <typename T>
+struct ActuatorIsValidForTempSensor
+{
+    /* This declaration uses SFINAE to check if T has all the required methods and members.
+    Here, the "->" is a syntax used in C++ to declare the return type of a function. It is called a
+    trailing return type. */
+    template <typename U>
+    static auto test(int) -> decltype(std::declval<U>().turn_on(), std::declval<U>().turn_off(),
+                                      std::declval<U>().temperature, std::true_type());
+
+    /* The (...) is a syntax used in C++ to declare a variadic function template argument. It allows
+    you to declare a function template that can take a variable number of arguments of any type.
+
+    The variadic template function is less specialized than the function template that accepts an
+    int, so it will only be used when the int version is not a better match for the arguments
+    passed.
+
+    Here, the test() function uses the variadic argument list to declare a fallback case that
+    returns std::false_type when the first overload with int argument fails, i.e., when the type U
+    does not have a turn_on() or turn_off() method or an attribute named temperature. */
+    template <typename U>
+    static std::false_type test(...);
+
+    static constexpr bool value = std::is_same<decltype(test<T>(0)), std::true_type>::value;
+};
+
 template <class T>
 class TempSensor
 {
+    static_assert(
+        ActuatorIsValidForTempSensor<T>::value,
+        "The class used for specialization of TempSensor does not match the requirements");
     using signal_t = boost::signals2::signal<void(const TempSensorEvent &evt)>;
 
    public:
@@ -312,10 +347,13 @@ class TempSensor
         on the current temperature and the limits */
         if (m_curr_temp > MAX_TEMP || reached() || (m_target.is_set && m_curr_temp > m_target.temp))
         {
+            /* TODO: Issue#8 - Sensor should not be responsible for turning on/off the actuator, rather,
+            it should publish events and let main "Toaster" object decide the actions */
             m_actuator.turn_off();
         }
         else
         {
+            /* TODO: Issue#8 */
             m_actuator.turn_on();
         }
     }
@@ -339,6 +377,7 @@ class TempSensor
     DeadlineTimer m_sensor_timer;
 };
 
+/* TODO: Issue#7 - Implement unit tests for Toaster*/
 class Toaster
 {
    public:
