@@ -69,29 +69,37 @@ class IncomingEventWrapper
         unknown,
         // Will end up translating from one ExternalEntityEvtType to one tao::InternalEvent
         external_entity_event,
+        // Will end up translating from one TempSensorEvtType to one tao::InternalEvent
+        temperature_sensor_event,
         // Will end up mapping directly to one of the tao::InternalEvent events
         internal_event,
     };
     struct type_wrapper : public boost::static_visitor<EventType>
     {
-        EventType operator()(const InternalEvent & /*obj*/) const
-        {
-            return EventType::internal_event;
-        }
         EventType operator()(const ExternalEntityEvent & /*obj*/) const
         {
             return EventType::external_entity_event;
         }
+        EventType operator()(const TempSensorEvent & /*obj*/) const
+        {
+            return EventType::temperature_sensor_event;
+        }
+        EventType operator()(const InternalEvent & /*obj*/) const
+        {
+            return EventType::internal_event;
+        }
     };
-    type_wrapper                                       wrapper;
-    boost::variant<InternalEvent, ExternalEntityEvent> m_event;
-    EventType                                          m_type;
+    type_wrapper                                                        wrapper;
+    boost::variant<ExternalEntityEvent, TempSensorEvent, InternalEvent> m_event;
+    EventType                                                           m_type;
 
     tao::InternalEvent map_external_entity_event_to_internal_event(
-        const ExternalEntityEvent &external_entity_event) const;
+        const ExternalEntityEvent &evt) const;
+    tao::InternalEvent map_temperature_sensor_event_to_internal_event(
+        const TempSensorEvent &evt) const;
 
    public:
-    IncomingEventWrapper(boost::variant<InternalEvent, ExternalEntityEvent> e)
+    IncomingEventWrapper(boost::variant<ExternalEntityEvent, TempSensorEvent, InternalEvent> e)
         : m_event{e}, m_type{e.apply_visitor(wrapper)}
     {
     }
@@ -247,6 +255,8 @@ class Heater
 template <class T>
 class TempSensor
 {
+    using signal_t = boost::signals2::signal<void(const TempSensorEvent &evt)>;
+
    public:
     struct target_temp_t
     {
@@ -278,6 +288,11 @@ class TempSensor
     {
         return (m_target.is_set && temp_within_target_range(2.0));
     }
+    template <typename F>
+    void register_callback(F &&handler)
+    {
+        m_signal.connect(handler);
+    }
 
    private:
     void callback()
@@ -289,13 +304,13 @@ class TempSensor
 
         if (reached())
         {
-            /* TODO: Issue#5 */
+            publish_event();
         }
 
         /* Supposedly, the actuator (heater) is not conscious about it's own temperature. The sensor
         is responsible for checking whether the actuator (heater) should be turned on or off based
         on the current temperature and the limits */
-        if (m_curr_temp > MAX_TEMP || reached())
+        if (m_curr_temp > MAX_TEMP || reached() || (m_target.is_set && m_curr_temp > m_target.temp))
         {
             m_actuator.turn_off();
         }
@@ -305,12 +320,19 @@ class TempSensor
         }
     }
 
+    // -> Method publish (emit) the signal
+    void publish_event()
+    {
+        m_signal(TempSensorEvent{TempSensorEvtType::target_temp_reached});
+    }
+
     bool temp_within_target_range(float range)
     {
         return ((m_curr_temp > m_target.temp - range) && (m_curr_temp < m_target.temp + range));
     }
 
    private:
+    signal_t      m_signal;
     T             m_actuator;
     float         m_curr_temp;
     target_temp_t m_target;
@@ -346,6 +368,8 @@ class Toaster
    public:
     Toaster()
         : m_queue{std::make_shared<SimplestThreadSafeQueue<tao::IncomingEventWrapper>>()},
+          m_heater{std::make_shared<Heater>()},
+          m_temp_sensor{std::make_shared<TempSensor<Heater>>()},
           m_timer{1000,
                   [this]() {
                       m_queue->put_prioritized(
@@ -355,6 +379,8 @@ class Toaster
     {
         // load_configs(config);
         set_initial_state(tao::StateValue::STATE_HEATING);
+        m_temp_sensor->register_callback(
+            boost::bind(&Toaster::put_temp_sensor_event, this, boost::placeholders::_1));
     }
     ~Toaster()
     {
@@ -374,10 +400,12 @@ class Toaster
     void stop();
 
     void put_external_entity_event(const ExternalEntityEvent &evt);
+    void put_temp_sensor_event(const TempSensorEvent &evt);
+
     template <class T>
     void generic_event_putter(const T &event)
     {
-        m_queue->put(tao::IncomingEventWrapper(event));
+        m_queue->put(tao::IncomingEventWrapper{event});
     }
 
     // Methods related to the specifics of this object type (toaster)
@@ -392,11 +420,11 @@ class Toaster
     void unset_target_temperature();
 
    private:
-    Heater             m_heater;
-    TempSensor<Heater> m_temp_sensor;
-    float              m_target_temp;
-    std::thread        m_thread;
-    DeadlineTimer      m_timer;
+    std::shared_ptr<Heater>             m_heater;
+    std::shared_ptr<TempSensor<Heater>> m_temp_sensor;
+    float                               m_target_temp;
+    std::thread                         m_thread;
+    DeadlineTimer                       m_timer;
 };
 
 #endif

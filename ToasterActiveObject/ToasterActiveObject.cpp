@@ -154,6 +154,7 @@ void tao::BakingState::process_internal_event(InternalEvent event)
             set_next_state(tao::StateValue::STATE_HEATING);
             break;
         case tao::InternalEvent::evt_target_temp_reached:
+            m_toaster->unset_target_temperature();
             /* TODO: Issue#3 */
             m_toaster->arm_time_event(10000);
             break;
@@ -221,6 +222,19 @@ tao::InternalEvent tao::IncomingEventWrapper::map_external_entity_event_to_inter
     }
 }
 
+tao::InternalEvent tao::IncomingEventWrapper::map_temperature_sensor_event_to_internal_event(
+    const TempSensorEvent &evt) const
+{
+    switch (evt.which())
+    {
+        case TempSensorEvtType::target_temp_reached:
+            return tao::InternalEvent::evt_target_temp_reached;
+            break;
+        default:
+            return tao::InternalEvent::unknown;
+    }
+}
+
 tao::InternalEvent tao::IncomingEventWrapper::map_incoming_event_to_internal_event()
 {
     std::cout << "tao::IncomingEventWrapper::map_incoming_event_to_internal_event()" << std::endl;
@@ -229,6 +243,10 @@ tao::InternalEvent tao::IncomingEventWrapper::map_incoming_event_to_internal_eve
         case tao::IncomingEventWrapper::EventType::external_entity_event:
             return map_external_entity_event_to_internal_event(
                 boost::get<ExternalEntityEvent>(m_event));
+            break;
+        case tao::IncomingEventWrapper::EventType::temperature_sensor_event:
+            return map_temperature_sensor_event_to_internal_event(
+                boost::get<TempSensorEvent>(m_event));
             break;
         case tao::IncomingEventWrapper::EventType::internal_event:
             return boost::get<InternalEvent>(m_event);
@@ -356,16 +374,30 @@ void Toaster::put_external_entity_event(const ExternalEntityEvent &evt)
     }
 }
 
+void Toaster::put_temp_sensor_event(const TempSensorEvent &evt)
+{
+    switch (evt.which())
+    {
+        case TempSensorEvtType::target_temp_reached:
+            generic_event_putter(evt);
+            break;
+        default:
+            std::cout << "Warning: Received unhandled event from temperature sensor: "
+                      << stringify(evt) << std::endl;
+            break;
+    }
+}
+
 void Toaster::heater_on()
 {
     std::cout << "Toaster::heater_on()" << std::endl;
-    m_heater.turn_on();
+    m_heater->turn_on();
 }
 
 void Toaster::heater_off()
 {
     std::cout << "Toaster::heater_off()" << std::endl;
-    m_heater.turn_off();
+    m_heater->turn_off();
 }
 
 void Toaster::internal_lamp_on()
@@ -399,12 +431,12 @@ void Toaster::disarm_time_event()
 
 void Toaster::set_target_temperature(float temp)
 {
-    m_temp_sensor.set_target_temp(temp);
+    m_temp_sensor->set_target_temp(temp);
     std::cout << "Toaster::set_target_temperature(float temp) - " << temp << std::endl;
 }
 
 void Toaster::unset_target_temperature()
 {
-    m_temp_sensor.unset_target_temp();
+    m_temp_sensor->unset_target_temp();
     std::cout << "Toaster::unset_target_temperature()" << std::endl;
 }
