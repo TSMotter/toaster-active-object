@@ -429,7 +429,7 @@ void Toaster::internal_lamp_off()
 
 void Toaster::arm_time_event(long time)
 {
-    if(m_timer.status() == DeadlineTimer::Status::running)
+    if (m_timer.status() == DeadlineTimer::Status::running)
     {
         return;
     }

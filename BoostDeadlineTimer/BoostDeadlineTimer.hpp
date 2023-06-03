@@ -19,10 +19,10 @@ class DeadlineTimer
 
     ~DeadlineTimer();
 
-    void start();
-    void start(long T);
-    void start(long T, bool cyclic);
-    void stop();
+    void   start();
+    void   start(long T);
+    void   start(long T, bool cyclic);
+    void   stop();
     Status status();
 
    private:

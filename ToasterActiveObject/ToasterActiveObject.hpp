@@ -6,6 +6,7 @@
 #include <thread>
 #include <memory>
 #include <vector>
+#include <type_traits>
 
 #include <boost/asio.hpp>
 #include <boost/variant.hpp>
@@ -259,35 +260,34 @@ class Heater
     DeadlineTimer m_heater_timer;
 };
 
-/* SFINAE (Substitution Failure Is Not An Error) is a technique in C++ to enforce that the class
-used for specialization of a template in fact has the required methods and members.
+/* SFINAE (Substitution Failure Is Not An Error) is a technique in C++ that can be used to enforce
+that the class used for specialization of a template in fact has the required methods and members.
 
-Here is the definition of a helper struct that has a template function that checks if the given type
-T has all the required methods and members */
+This SFINAE method using std::enable_if, which leads to a more readable approach.
+Also, this method allows to check not only that the method "temperature()" exists on the
+specialization class, but also checks that it's return type is the one expected, in this case a
+float */
 template <typename T>
 struct ActuatorIsValidForTempSensor
 {
-    /* This declaration uses SFINAE to check if T has all the required methods and members.
-    Here, the "->" is a syntax used in C++ to declare the return type of a function. It is called a
-    trailing return type. */
+    /* - The first test function uses std::enable_if in the return type to conditionally enable it
+    based on the type of std::declval<U>().temperature().
+    - We use std::is_same to check if the type of std::declval<U>().temperature() is float.
+    - If it is, we define the return type as std::true_type, indicating that U has a valid
+    temperature() member function. */
     template <typename U>
-    static auto test(int) -> decltype(std::declval<U>().temperature(), std::true_type());
+    static typename std::enable_if<
+        std::is_same<decltype(std::declval<U>().temperature()), float>::value, std::true_type>::type
+    test(int);
 
-    /* The (...) is a syntax used in C++ to declare a variadic function template argument. It allows
-    you to declare a function template that can take a variable number of arguments of any type.
-
-    The variadic template function is less specialized than the function template that accepts an
-    int, so it will only be used when the int version is not a better match for the arguments
-    passed.
-
-    Here, the test() function uses the variadic argument list to declare a fallback case that
-    returns std::false_type when the first overload with int argument fails, i.e., when the type U
-    does not have a turn_on() or turn_off() method or an attribute named temperature. */
+    /* This second test function is a fallback option that will be used if the first test function
+     * cannot be matched during overload resolution. */
     template <typename U>
     static std::false_type test(...);
 
     static constexpr bool value = std::is_same<decltype(test<T>(0)), std::true_type>::value;
 };
+
 
 template <class T>
 class TempSensor
