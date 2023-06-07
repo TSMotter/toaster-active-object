@@ -2,6 +2,6 @@
 add_executable(main main.cpp)
 
 # Make the directory known
-target_include_directories(main PUBLIC ${CMAKE_SOURCE_DIR}/ThreadSafeQueue)
+target_include_directories(main PUBLIC ${CMAKE_SOURCE_DIR}/lib/ThreadSafeQueue)
 # Link library to a binary target
 target_link_libraries(main PUBLIC ThreadSafeQueue)

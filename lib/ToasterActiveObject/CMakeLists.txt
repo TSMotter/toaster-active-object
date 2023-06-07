@@ -17,8 +17,8 @@ add_library(ToasterActiveObject
 # ******************************************************************************
 target_include_directories(ToasterActiveObject PUBLIC 
                             ${Boost_INCLUDE_DIR}
-                            ${CMAKE_SOURCE_DIR}/ThreadSafeQueue
-                            ${CMAKE_SOURCE_DIR}/BoostDeadlineTimer)
+                            ${CMAKE_SOURCE_DIR}/lib/ThreadSafeQueue
+                            ${CMAKE_SOURCE_DIR}/lib/BoostDeadlineTimer)
 
 # ******************************************************************************
 # **** Link the libraries ****
