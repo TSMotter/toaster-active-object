@@ -62,13 +62,13 @@ DeadlineTimer::DeadlineTimer(long T, std::function<void(void)> cb, bool cyclic)
       m_callback(cb),
       m_cyclic(cyclic)
 {
-    myLocalLogger.Logdebug("DeadlineTimer");
+    myLocalLogger.Logdebug("[Constructor()]");
     m_ioc_thread = std::thread(&DeadlineTimer::io_context_runner, this);
 }
 
 DeadlineTimer::~DeadlineTimer()
 {
-    myLocalLogger.Logdebug("~DeadlineTimer()");
+    myLocalLogger.Logdebug("[Destructor()]");
     m_worker.reset();
     m_service->stop();
     if (m_ioc_thread.joinable())
