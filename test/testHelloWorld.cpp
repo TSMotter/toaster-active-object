@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-TEST(StringsTest, StringAssertions)
+TEST(HelloWorldTest, HelloWorldAssertions)
 {
     EXPECT_STRNE("hello", "world");
 }

@@ -144,6 +144,6 @@ void DeadlineTimer::callback(const boost::system::error_code &err)
     }
     else
     {
-        m_status == Status::stopped;
+        m_status = Status::stopped;
     }
 }
