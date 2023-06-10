@@ -41,7 +41,7 @@ class SimplestThreadSafeQueue : public IThreadSafeQueue<T>
     virtual void put(T &&element) override
     {
         {
-            std::lock_guard<decltype(m_mutex)> lock(m_mutex);
+            std::scoped_lock<std::mutex> lock(m_mutex);
             myLogger->debug("[put(T &&element)] Putting element in back of queue");
             m_queue.push_back(std::forward<T>(element));
         }
@@ -50,7 +50,7 @@ class SimplestThreadSafeQueue : public IThreadSafeQueue<T>
     virtual void put_prioritized(T &&element) override
     {
         {
-            std::lock_guard<decltype(m_mutex)> lock(m_mutex);
+            std::scoped_lock<std::mutex> lock(m_mutex);
             myLogger->debug("[put_prioritized(T &&element)] Putting element in front of queue");
             m_queue.push_front(std::forward<T>(element));
         }
@@ -60,7 +60,7 @@ class SimplestThreadSafeQueue : public IThreadSafeQueue<T>
     virtual std::shared_ptr<T> wait_and_pop() override
     {
         std::shared_ptr<T>                  result;
-        std::unique_lock<decltype(m_mutex)> lock(m_mutex);
+        std::unique_lock<std::mutex> lock(m_mutex);
         myLogger->debug("[wait_and_pop()] Waiting for data in background");
         m_cv.wait(lock,
                   [&]()
@@ -88,7 +88,7 @@ class SimplestThreadSafeQueue : public IThreadSafeQueue<T>
         happy path is represented by a filled shared_ptr
         timeout is represented by a nullptr shared_ptr */
         std::shared_ptr<T>                  result;
-        std::unique_lock<decltype(m_mutex)> lock(m_mutex);
+        std::unique_lock<std::mutex> lock(m_mutex);
         myLogger->debug("[wait_and_pop_for(const std::chrono...] Waiting for data in background");
         /*  The return of wait_for is false if it returns and the predicate is still false */
         if (m_cv.wait_for(
@@ -120,7 +120,7 @@ class SimplestThreadSafeQueue : public IThreadSafeQueue<T>
         myLogger->debug("[empty()]");
         bool result;
         {
-            std::lock_guard<decltype(m_mutex)> lock(m_mutex);
+            std::scoped_lock<std::mutex> lock(m_mutex);
             result = m_queue.empty();
         }
         return result;

@@ -13,7 +13,7 @@ class BoostDeadlineTimerFixture : public ::testing::Test
         // You can do set-up work for each test here.
     }
 
-    ~BoostDeadlineTimerFixture() override
+    ~BoostDeadlineTimerFixture()
     {
         // You can do clean-up work that doesn't throw exceptions here.
     }

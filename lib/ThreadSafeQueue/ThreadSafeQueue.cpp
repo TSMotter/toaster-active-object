@@ -19,9 +19,9 @@ void test_queue()
     auto data2 = int{82};
     auto data3 = int{83};
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    myLogger->debug("[test_queue()] Producing data in main thread: data ", data1);
-    myLogger->debug("[test_queue()] Producing data in main thread: data ", data2);
-    myLogger->debug("[test_queue()] Producing data in main thread: data ", data3);
+    myLogger->debug("[test_queue()] Producing data in main thread: {0:d}", data1);
+    myLogger->debug("[test_queue()] Producing data in main thread: {0:d}", data2);
+    myLogger->debug("[test_queue()] Producing data in main thread: {0:d}", data3);
     queue->put(std::move(data1));
     queue->put(std::move(data2));
     queue->put_prioritized(std::move(data3));
