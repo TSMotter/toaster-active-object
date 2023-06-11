@@ -59,7 +59,7 @@ class SimplestThreadSafeQueue : public IThreadSafeQueue<T>
     // Wait without a timeout
     virtual std::shared_ptr<T> wait_and_pop() override
     {
-        std::shared_ptr<T>                  result;
+        std::shared_ptr<T>           result;
         std::unique_lock<std::mutex> lock(m_mutex);
         myLogger->debug("[wait_and_pop()] Waiting for data in background");
         m_cv.wait(lock,
@@ -87,7 +87,7 @@ class SimplestThreadSafeQueue : public IThreadSafeQueue<T>
         outcome of a timeout:
         happy path is represented by a filled shared_ptr
         timeout is represented by a nullptr shared_ptr */
-        std::shared_ptr<T>                  result;
+        std::shared_ptr<T>           result;
         std::unique_lock<std::mutex> lock(m_mutex);
         myLogger->debug("[wait_and_pop_for(const std::chrono...] Waiting for data in background");
         /*  The return of wait_for is false if it returns and the predicate is still false */
