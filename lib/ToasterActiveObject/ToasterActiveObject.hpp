@@ -16,6 +16,7 @@
 #include "ThreadSafeQueue.hpp"
 #include "BoostDeadlineTimer.hpp"
 
+// Forward declaration
 class Toaster;
 
 // namespace toaster active object - tao
@@ -114,12 +115,6 @@ class IncomingEventWrapper
 
 class GenericToasterState
 {
-   protected:
-    Toaster *m_toaster;
-
-   private:
-    StateValue m_state;
-
    public:
     GenericToasterState(Toaster *tstr, StateValue state = StateValue::UNKNOWN)
         : m_toaster{tstr}, m_state{state}
@@ -141,13 +136,20 @@ class GenericToasterState
     {
         return m_state;
     }
+
+   protected:
+    Toaster *m_toaster;
+
+   private:
+    StateValue m_state;
 };
 
 class HeatingSuperState : public GenericToasterState
 {
    public:
     virtual ~HeatingSuperState() = default;
-    HeatingSuperState(Toaster *tstr) : GenericToasterState(tstr, StateValue::STATE_HEATING)
+    HeatingSuperState(Toaster *tstr, StateValue state = StateValue::STATE_HEATING)
+        : GenericToasterState{tstr, state}
     {
     }
     virtual void on_entry() override;
@@ -162,7 +164,7 @@ class ToastingState : public HeatingSuperState
     virtual ~ToastingState()
     {
     }
-    ToastingState(Toaster *tstr) : HeatingSuperState(tstr)
+    ToastingState(Toaster *tstr) : HeatingSuperState{tstr, StateValue::STATE_TOASTING}
     {
     }
     virtual void on_entry() override;
@@ -175,7 +177,7 @@ class BakingState : public HeatingSuperState
     virtual ~BakingState()
     {
     }
-    BakingState(Toaster *tstr) : HeatingSuperState(tstr)
+    BakingState(Toaster *tstr) : HeatingSuperState{tstr, StateValue::STATE_BAKING}
     {
     }
     virtual void on_entry() override;
@@ -186,7 +188,7 @@ class DoorOpenState : public GenericToasterState
 {
    public:
     virtual ~DoorOpenState() = default;
-    DoorOpenState(Toaster *tstr) : GenericToasterState(tstr, tao::StateValue::STATE_DOOR_OPEN)
+    DoorOpenState(Toaster *tstr) : GenericToasterState{tstr, tao::StateValue::STATE_DOOR_OPEN}
     {
     }
     virtual void on_entry() override;
@@ -219,14 +221,14 @@ class Heater
 
     void turn_on()
     {
-        std::cout << "Heater::turn_on()" << std::endl;
+        //std::cout << "Heater::turn_on()" << std::endl;
         m_status = Status::On;
         // hal_method_to_turn_relay_on(); // Something like this would be done in the real world
     }
 
     void turn_off()
     {
-        std::cout << "Heater::turn_off()" << std::endl;
+        //std::cout << "Heater::turn_off()" << std::endl;
         m_status = Status::Off;
         // hal_method_to_turn_relay_off(); // Something like this would be done in the real world
     }
@@ -288,7 +290,6 @@ struct ActuatorIsValidForTempSensor
     static constexpr bool value = std::is_same<decltype(test<T>(0)), std::true_type>::value;
 };
 
-
 template <class T>
 class TempSensor
 {
@@ -327,7 +328,7 @@ class TempSensor
    private:
     void callback()
     {
-        std::cout << "TempSensor::callback - " << m_curr_temp << "/" << m_target_temp << std::endl;
+        //std::cout << "TempSensor::callback - " << m_curr_temp << "/" << m_target_temp << std::endl;
 
         // hal_method_to_read_sensor_temperature(); // Abstracted in this example
         m_curr_temp = m_actuator->temperature();
@@ -381,14 +382,6 @@ class Toaster
         charcoal,
     };
 
-   public:
-    bool                                      m_running{false};
-    std::shared_ptr<tao::GenericToasterState> m_state;
-    tao::StateValue                           m_next_state{tao::StateValue::UNKNOWN};
-    DoorStatus                                m_door_status;
-    std::shared_ptr<IThreadSafeQueue<tao::IncomingEventWrapper>> m_queue;
-
-   public:
     Toaster()
         : m_queue{std::make_shared<SimplestThreadSafeQueue<tao::IncomingEventWrapper>>()},
           m_heater{std::make_shared<Heater>()},
@@ -400,24 +393,24 @@ class Toaster
                   },
                   false}
     {
-        // load_configs(config);
         set_initial_state(tao::StateValue::STATE_HEATING);
         m_temp_sensor->register_callback(
             boost::bind(&Toaster::put_temp_sensor_event, this, boost::placeholders::_1));
     }
+
     ~Toaster()
     {
         stop();
         m_queue->clear();
     }
-    // Methods related to the general operation of any object of this architecture
+
     void set_next_state(tao::StateValue new_state);
     void set_state(tao::StateValue new_state);
     void transition_state();
     void state_machine_iteration();
     void state_machine_iteration(tao::InternalEvent evt);
     void set_initial_state(tao::StateValue new_state);
-    // Thread related methods
+
     void run();
     void start();
     void stop();
@@ -431,7 +424,6 @@ class Toaster
         m_queue->put(tao::IncomingEventWrapper{event});
     }
 
-    // Methods related to the specifics of this object type (toaster)
     void heater_on();
     void heater_off();
     void internal_lamp_on();
@@ -440,6 +432,12 @@ class Toaster
     void arm_time_event(ToastLevel level);
     void disarm_time_event();
     void set_target_temperature(float temp);
+
+    bool                                      m_running{false};
+    std::shared_ptr<tao::GenericToasterState> m_state;
+    tao::StateValue                           m_next_state{tao::StateValue::UNKNOWN};
+    DoorStatus                                m_door_status;
+    std::shared_ptr<IThreadSafeQueue<tao::IncomingEventWrapper>> m_queue;
 
    private:
     std::shared_ptr<Heater>             m_heater;
