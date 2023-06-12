@@ -79,4 +79,3 @@ TEST_F(ToasterActiveObjectFixture, TestEventToastInterruptedBecauseOfOpenDoor)
     external_event_putter(ExternalEntityEvtType::opening_door);
     ASSERT_TRUE(assertState(tao::StateValue::STATE_DOOR_OPEN));
 }
-

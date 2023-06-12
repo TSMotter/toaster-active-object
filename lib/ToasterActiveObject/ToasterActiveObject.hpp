@@ -221,14 +221,14 @@ class Heater
 
     void turn_on()
     {
-        //std::cout << "Heater::turn_on()" << std::endl;
+        // std::cout << "Heater::turn_on()" << std::endl;
         m_status = Status::On;
         // hal_method_to_turn_relay_on(); // Something like this would be done in the real world
     }
 
     void turn_off()
     {
-        //std::cout << "Heater::turn_off()" << std::endl;
+        // std::cout << "Heater::turn_off()" << std::endl;
         m_status = Status::Off;
         // hal_method_to_turn_relay_off(); // Something like this would be done in the real world
     }
@@ -328,7 +328,8 @@ class TempSensor
    private:
     void callback()
     {
-        //std::cout << "TempSensor::callback - " << m_curr_temp << "/" << m_target_temp << std::endl;
+        // std::cout << "TempSensor::callback - " << m_curr_temp << "/" << m_target_temp <<
+        // std::endl;
 
         // hal_method_to_read_sensor_temperature(); // Abstracted in this example
         m_curr_temp = m_actuator->temperature();
