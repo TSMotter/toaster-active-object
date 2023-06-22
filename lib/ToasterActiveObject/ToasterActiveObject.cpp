@@ -453,6 +453,6 @@ void Toaster::disarm_time_event()
 
 void Toaster::set_target_temperature(float temp)
 {
-    m_temp_sensor->set_target_temp(temp);
+    m_temp_sensor->set_target_temperature(temp);
     // std::cout << "Toaster::set_target_temperature(float temp) - " << temp << std::endl;
 }

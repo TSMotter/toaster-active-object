@@ -212,29 +212,33 @@ class IHeater
         Off
     };
 
-    virtual void   turn_on()         = 0;
-    virtual void   turn_off()        = 0;
-    virtual float  get_temperature() = 0;
+    virtual void   turn_on()  = 0;
+    virtual void   turn_off() = 0;
     virtual Status get_status() const
     {
         return m_status;
     }
 
    protected:
-    float  m_temp;
     Status m_status;
 };
 
 class HeaterDemo : public IHeater
 {
    public:
+    /* This public constant reference to a float makes it so that the temp_read_only can be accessed
+    from the outside as if it was a read-only attribute */
+    const float &temp_read_only;
+
+   public:
     HeaterDemo()
-        : m_heater_timer{MOCKED_OBJECTS_TIMER_PERIOD, boost::bind(&HeaterDemo::callback, this),
+        : m_temp(AMBIENT_TEMP),
+          temp_read_only(m_temp),
+          m_heater_timer{MOCKED_OBJECTS_TIMER_PERIOD, boost::bind(&HeaterDemo::callback, this),
                          true}
     {
         // Initializes common protected members from interface
         m_status = Status::Off;
-        m_temp   = AMBIENT_TEMP;
 
         m_heater_timer.start();
     }
@@ -249,15 +253,10 @@ class HeaterDemo : public IHeater
         m_status = Status::Off;
     }
 
-    float get_temperature() override
-    {
-        return m_temp;
-    }
-
    private:
     void callback()
     {
-        if (m_status == Status::On)
+        if (m_status == Status::On && m_temp < MAX_TEMP)
         {
             m_temp++;
         }
@@ -268,6 +267,7 @@ class HeaterDemo : public IHeater
     }
 
    private:
+    float         m_temp;
     DeadlineTimer m_heater_timer;
 };
 
@@ -275,20 +275,18 @@ class HeaterDemo : public IHeater
 that the class used for specialization of a template in fact has the required methods and members.
 
 This SFINAE method using std::enable_if, which leads to a more readable approach.
-Also, this method allows to check not only that the method "get_temperature()" exists on the
-specialization class, but also checks that it's return type is the one expected, in this case a
-float */
+Also, this method allows to check not only that a method exists on the specialization class,
+but also checks that it's return type is the one expected */
 template <typename T>
 struct ActuatorIsValidForTempSensor
 {
     /* - The first test function uses std::enable_if in the return type to conditionally enable it
-    based on the type of std::declval<U>().get_temperature().
-    - We use std::is_same to check if the type of std::declval<U>().get_temperature() is float.
-    - If it is, we define the return type as std::true_type, indicating that U has a valid
-    get_temperature() member function. */
+    based on the type of std::declval<U>().temp_read_only.
+    - We use std::is_same to check if the type of std::declval<U>().temp_read_only is "const float &"
+    - If it is, we define the return type as std::true_type */
     template <typename U>
     static typename std::enable_if<
-        std::is_same<decltype(std::declval<U>().get_temperature()), float>::value,
+        std::is_same<decltype(std::declval<U>().temp_read_only), const float &>::value,
         std::true_type>::type
     test(int);
 
@@ -300,35 +298,74 @@ struct ActuatorIsValidForTempSensor
     static constexpr bool value = std::is_same<decltype(test<T>(0)), std::true_type>::value;
 };
 
-template <class T>
-class TempSensor
+
+class ITempSensor
 {
-    static_assert(
-        ActuatorIsValidForTempSensor<T>::value,
-        "The class used for specialization of TempSensor does not match the requirements");
+   public:
+    enum class Status
+    {
+        On,
+        Off
+    };
+
+    virtual void   turn_on()                          = 0;
+    virtual void   turn_off()                         = 0;
+    virtual float  get_temperature() const            = 0;
+    virtual void   set_target_temperature(float temp) = 0;
+    virtual Status get_status() const
+    {
+        return m_status;
+    }
+
+   protected:
+    Status m_status;
+    float  m_curr_temp;
+    float  m_target_temp;
+};
+
+template <class T>
+class TempSensorDemo : public ITempSensor
+{
+    static_assert(ActuatorIsValidForTempSensor<T>::value,
+                  "The class used for specialization of TempSensorDemo does not match the "
+                  "requirements - SFINAE");
 
     using signal_t = boost::signals2::signal<void(const TempSensorEvent &evt)>;
 
    public:
-    /* This public constant reference to a float makes it so that the temperaturero can be accessed
-    from the outside as if it was a read-only attribute */
-    const float &temperaturero;
-
-   public:
-    TempSensor(std::shared_ptr<T> act, float error = 2.0f)
+    TempSensorDemo(std::shared_ptr<T> act, float error = 2.0f)
         : m_actuator(act),
           m_error(error),
-          m_sensor_timer{MOCKED_OBJECTS_TIMER_PERIOD, boost::bind(&TempSensor::callback, this),
-                         true},
-          m_target_temp(AMBIENT_TEMP),
-          temperaturero(m_curr_temp)
+          m_sensor_timer{MOCKED_OBJECTS_TIMER_PERIOD, boost::bind(&TempSensorDemo::callback, this),
+                         true}
     {
+        // Initializes common protected members from interface
+        m_status      = Status::Off;
+        m_curr_temp   = AMBIENT_TEMP;
+        m_target_temp = AMBIENT_TEMP;
+
         m_sensor_timer.start();
     }
-    void set_target_temp(float temp_to_set_as_target)
+
+    void turn_on() override
     {
-        m_target_temp = temp_to_set_as_target;
+        m_status = Status::On;
     }
+    void turn_off() override
+    {
+        m_status = Status::Off;
+    }
+
+    float get_temperature() const override
+    {
+        return m_curr_temp;
+    }
+
+    void set_target_temperature(float temp) override
+    {
+        m_target_temp = temp;
+    }
+
     template <typename F>
     void register_callback(F &&handler)
     {
@@ -338,11 +375,7 @@ class TempSensor
    private:
     void callback()
     {
-        // std::cout << "TempSensor::callback - " << m_curr_temp << "/" << m_target_temp <<
-        // std::endl;
-
-        // hal_method_to_read_sensor_temperature(); // Abstracted in this example
-        m_curr_temp = m_actuator->get_temperature();
+        m_curr_temp = m_actuator->temp_read_only;
 
         if ((m_curr_temp > m_target_temp - m_error) && (m_curr_temp < m_target_temp + m_error))
         {
@@ -367,9 +400,7 @@ class TempSensor
    private:
     signal_t           m_signal;
     std::shared_ptr<T> m_actuator;
-    float              m_curr_temp;
     float              m_error;
-    float              m_target_temp;
     DeadlineTimer      m_sensor_timer;
 };
 
@@ -396,7 +427,7 @@ class Toaster
     Toaster()
         : m_queue{std::make_shared<SimplestThreadSafeQueue<tao::IncomingEventWrapper>>()},
           m_heater{std::make_shared<HeaterDemo>()},
-          m_temp_sensor{std::make_shared<TempSensor<HeaterDemo>>(m_heater, 2.0f)},
+          m_temp_sensor{std::make_shared<TempSensorDemo<HeaterDemo>>(m_heater, 2.0f)},
           m_timer{1000,
                   [this]() {
                       m_queue->put_prioritized(
@@ -451,11 +482,11 @@ class Toaster
     std::shared_ptr<IThreadSafeQueue<tao::IncomingEventWrapper>> m_queue;
 
    private:
-    std::shared_ptr<HeaterDemo>             m_heater;
-    std::shared_ptr<TempSensor<HeaterDemo>> m_temp_sensor;
-    float                                   m_target_temp;
-    std::thread                             m_thread;
-    DeadlineTimer                           m_timer;
+    std::shared_ptr<HeaterDemo>                 m_heater;
+    std::shared_ptr<TempSensorDemo<HeaterDemo>> m_temp_sensor;
+    float                                       m_target_temp;
+    std::thread                                 m_thread;
+    DeadlineTimer                               m_timer;
 };
 
 #endif
