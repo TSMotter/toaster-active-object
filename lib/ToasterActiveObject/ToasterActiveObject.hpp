@@ -12,6 +12,8 @@
 #include <boost/variant.hpp>
 #include <boost/signals2.hpp>
 
+#include "Actuators.hpp"
+#include "Sensors.hpp"
 #include "Events.hpp"
 #include "ThreadSafeQueue.hpp"
 #include "BoostDeadlineTimer.hpp"
@@ -202,28 +204,7 @@ class DoorOpenState : public GenericToasterState
 #define MAX_TEMP 80.0
 #define MOCKED_OBJECTS_TIMER_PERIOD 1000
 
-
-class IHeater
-{
-   public:
-    enum class Status
-    {
-        On,
-        Off
-    };
-
-    virtual void   turn_on()  = 0;
-    virtual void   turn_off() = 0;
-    virtual Status get_status() const
-    {
-        return m_status;
-    }
-
-   protected:
-    Status m_status;
-};
-
-class HeaterDemo : public IHeater
+class HeaterDemo : public Actuators::IHeater
 {
    public:
     /* This public constant reference to a float makes it so that the temp_read_only can be accessed
@@ -282,7 +263,8 @@ struct ActuatorIsValidForTempSensor
 {
     /* - The first test function uses std::enable_if in the return type to conditionally enable it
     based on the type of std::declval<U>().temp_read_only.
-    - We use std::is_same to check if the type of std::declval<U>().temp_read_only is "const float &"
+    - We use std::is_same to check if the type of std::declval<U>().temp_read_only is "const float
+    &"
     - If it is, we define the return type as std::true_type */
     template <typename U>
     static typename std::enable_if<
@@ -298,33 +280,8 @@ struct ActuatorIsValidForTempSensor
     static constexpr bool value = std::is_same<decltype(test<T>(0)), std::true_type>::value;
 };
 
-
-class ITempSensor
-{
-   public:
-    enum class Status
-    {
-        On,
-        Off
-    };
-
-    virtual void   turn_on()                          = 0;
-    virtual void   turn_off()                         = 0;
-    virtual float  get_temperature() const            = 0;
-    virtual void   set_target_temperature(float temp) = 0;
-    virtual Status get_status() const
-    {
-        return m_status;
-    }
-
-   protected:
-    Status m_status;
-    float  m_curr_temp;
-    float  m_target_temp;
-};
-
 template <class T>
-class TempSensorDemo : public ITempSensor
+class TempSensorDemo : public Sensors::ITempSensor
 {
     static_assert(ActuatorIsValidForTempSensor<T>::value,
                   "The class used for specialization of TempSensorDemo does not match the "
