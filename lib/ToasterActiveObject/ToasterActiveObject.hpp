@@ -199,24 +199,20 @@ class DoorOpenState : public GenericToasterState
 };
 }  // namespace tao
 
-
-#define AMBIENT_TEMP 25.0
-#define MAX_TEMP 80.0
-#define MOCKED_OBJECTS_TIMER_PERIOD 1000
+namespace DemoObjects
+{
+#define DEMO_AMBIENT_TEMP 25.0
+#define DEMO_MAX_TEMP 80.0
+#define DEMO_OBJECTS_TIMER_PERIOD 1000
+static float global_curr_temp_inside_toaster = DEMO_AMBIENT_TEMP;
 
 class HeaterDemo : public Actuators::IHeater
 {
    public:
-    /* This public constant reference to a float makes it so that the temp_read_only can be accessed
-    from the outside as if it was a read-only attribute */
-    const float &temp_read_only;
-
-   public:
-    HeaterDemo()
-        : m_temp(AMBIENT_TEMP),
-          temp_read_only(m_temp),
-          m_heater_timer{MOCKED_OBJECTS_TIMER_PERIOD, boost::bind(&HeaterDemo::callback, this),
-                         true}
+    HeaterDemo(float &toaster_temp = global_curr_temp_inside_toaster)
+        : m_ref_curr_toaster_temp(toaster_temp),
+          m_temp(DEMO_AMBIENT_TEMP),
+          m_heater_timer{DEMO_OBJECTS_TIMER_PERIOD, boost::bind(&HeaterDemo::callback, this), true}
     {
         // Initializes common protected members from interface
         m_status = Status::Off;
@@ -237,71 +233,48 @@ class HeaterDemo : public Actuators::IHeater
    private:
     void callback()
     {
-        if (m_status == Status::On && m_temp < MAX_TEMP)
+        if (m_status == Status::On && m_temp < DEMO_MAX_TEMP)
         {
             m_temp++;
         }
-        else if (m_status == Status::Off && m_temp > AMBIENT_TEMP)
+        else if (m_status == Status::Off && m_temp > DEMO_AMBIENT_TEMP)
         {
             m_temp--;
         }
+        // Toaster current internal temperature follows current heater temperature...
+        m_ref_curr_toaster_temp = m_temp;
     }
 
    private:
+    float        &m_ref_curr_toaster_temp;
     float         m_temp;
     DeadlineTimer m_heater_timer;
 };
 
-/* SFINAE (Substitution Failure Is Not An Error) is a technique in C++ that can be used to enforce
-that the class used for specialization of a template in fact has the required methods and members.
-
-This SFINAE method using std::enable_if, which leads to a more readable approach.
-Also, this method allows to check not only that a method exists on the specialization class,
-but also checks that it's return type is the one expected */
-template <typename T>
-struct ActuatorIsValidForTempSensor
-{
-    /* - The first test function uses std::enable_if in the return type to conditionally enable it
-    based on the type of std::declval<U>().temp_read_only.
-    - We use std::is_same to check if the type of std::declval<U>().temp_read_only is "const float
-    &"
-    - If it is, we define the return type as std::true_type */
-    template <typename U>
-    static typename std::enable_if<
-        std::is_same<decltype(std::declval<U>().temp_read_only), const float &>::value,
-        std::true_type>::type
-    test(int);
-
-    /* This second test function is a fallback option that will be used if the first test function
-     * cannot be matched during overload resolution. */
-    template <typename U>
-    static std::false_type test(...);
-
-    static constexpr bool value = std::is_same<decltype(test<T>(0)), std::true_type>::value;
-};
-
-template <class T>
 class TempSensorDemo : public Sensors::ITempSensor
 {
-    static_assert(ActuatorIsValidForTempSensor<T>::value,
-                  "The class used for specialization of TempSensorDemo does not match the "
-                  "requirements - SFINAE");
-
-    using signal_t = boost::signals2::signal<void(const TempSensorEvent &evt)>;
+    using signal_t   = boost::signals2::signal<void(const TempSensorEvent &evt)>;
+    using callback_t = std::function<void(const TempSensorEvent &)>;
 
    public:
-    TempSensorDemo(std::shared_ptr<T> act, float error = 2.0f)
-        : m_actuator(act),
+    TempSensorDemo(const float &toaster_temp = global_curr_temp_inside_toaster, float error = 2.0f)
+        : m_ref_curr_toaster_temp(toaster_temp),
           m_error(error),
-          m_sensor_timer{MOCKED_OBJECTS_TIMER_PERIOD, boost::bind(&TempSensorDemo::callback, this),
+          m_sensor_timer{DEMO_OBJECTS_TIMER_PERIOD, boost::bind(&TempSensorDemo::callback, this),
                          true}
     {
         // Initializes common protected members from interface
         m_status      = Status::Off;
-        m_curr_temp   = AMBIENT_TEMP;
-        m_target_temp = AMBIENT_TEMP;
+        m_curr_temp   = DEMO_AMBIENT_TEMP;
+        m_target_temp = DEMO_AMBIENT_TEMP;
 
         m_sensor_timer.start();
+    }
+
+    // Overloading the initialize method
+    void initialize(callback_t cb)
+    {
+        register_callback(cb);
     }
 
     void turn_on() override
@@ -323,16 +296,21 @@ class TempSensorDemo : public Sensors::ITempSensor
         m_target_temp = temp;
     }
 
+    Status get_status() const override
+    {
+        return m_status;
+    }
+
+   private:
     template <typename F>
     void register_callback(F &&handler)
     {
         m_signal.connect(handler);
     }
 
-   private:
     void callback()
     {
-        m_curr_temp = m_actuator->temp_read_only;
+        m_curr_temp = m_ref_curr_toaster_temp;
 
         if ((m_curr_temp > m_target_temp - m_error) && (m_curr_temp < m_target_temp + m_error))
         {
@@ -355,11 +333,12 @@ class TempSensorDemo : public Sensors::ITempSensor
     }
 
    private:
-    signal_t           m_signal;
-    std::shared_ptr<T> m_actuator;
-    float              m_error;
-    DeadlineTimer      m_sensor_timer;
+    const float  &m_ref_curr_toaster_temp;
+    signal_t      m_signal;
+    float         m_error;
+    DeadlineTimer m_sensor_timer;
 };
+}  // namespace DemoObjects
 
 /* TODO: Issue#7 - Implement unit tests for Toaster*/
 class Toaster
@@ -381,19 +360,14 @@ class Toaster
         charcoal,
     };
 
-    Toaster()
+    Toaster(std::shared_ptr<Actuators::IHeater> htr, std::shared_ptr<Sensors::ITempSensor> ssr)
         : m_queue{std::make_shared<SimplestThreadSafeQueue<tao::IncomingEventWrapper>>()},
-          m_heater{std::make_shared<HeaterDemo>()},
-          m_temp_sensor{std::make_shared<TempSensorDemo<HeaterDemo>>(m_heater, 2.0f)},
-          m_timer{1000,
-                  [this]() {
-                      m_queue->put_prioritized(
-                          tao::IncomingEventWrapper(tao::InternalEvent::evt_alarm_timeout));
-                  },
-                  false}
+          m_heater{htr},
+          m_temp_sensor{ssr},
+          m_timer{1000, boost::bind(&Toaster::timer_callback, this), false}
     {
         set_initial_state(tao::StateValue::STATE_HEATING);
-        m_temp_sensor->register_callback(
+        m_temp_sensor->initialize(
             boost::bind(&Toaster::put_temp_sensor_event, this, boost::placeholders::_1));
     }
 
@@ -439,11 +413,17 @@ class Toaster
     std::shared_ptr<IThreadSafeQueue<tao::IncomingEventWrapper>> m_queue;
 
    private:
-    std::shared_ptr<HeaterDemo>                 m_heater;
-    std::shared_ptr<TempSensorDemo<HeaterDemo>> m_temp_sensor;
-    float                                       m_target_temp;
-    std::thread                                 m_thread;
-    DeadlineTimer                               m_timer;
+    void timer_callback()
+    {
+        m_queue->put_prioritized(tao::IncomingEventWrapper(tao::InternalEvent::evt_alarm_timeout));
+    }
+
+   private:
+    std::shared_ptr<Actuators::IHeater>   m_heater;
+    std::shared_ptr<Sensors::ITempSensor> m_temp_sensor;
+    float                                 m_target_temp;
+    std::thread                           m_thread;
+    DeadlineTimer                         m_timer;
 };
 
 #endif

@@ -8,7 +8,9 @@
 class ToasterActiveObjectFixture : public ::testing::Test
 {
    protected:
-    ToasterActiveObjectFixture() : m_toaster{std::make_shared<Toaster>()}
+    ToasterActiveObjectFixture()
+        : m_toaster{std::make_shared<Toaster>(std::make_shared<DemoObjects::HeaterDemo>(),
+                                              std::make_shared<DemoObjects::TempSensorDemo>())}
     {
         // You can do set-up work for each test here.
     }

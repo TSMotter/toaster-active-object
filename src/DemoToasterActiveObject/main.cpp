@@ -18,7 +18,8 @@ int main(int argc, char **argv)
     /* Binds the SIGINT signal to my custom handler */
     signal(SIGINT, sigint_handler);
 
-    auto toaster = std::make_shared<Toaster>();
+    auto toaster = std::make_shared<Toaster>(std::make_shared<DemoObjects::HeaterDemo>(),
+                                             std::make_shared<DemoObjects::TempSensorDemo>());
 
     toaster->start();
 

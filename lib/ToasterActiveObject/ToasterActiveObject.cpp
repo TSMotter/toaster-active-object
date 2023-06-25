@@ -76,7 +76,7 @@ Implementations of tao::HeatingSuperState
 void tao::HeatingSuperState::on_entry()
 {
     // std::cout << "HeatingSuperState::on_entry" << std::endl;
-    m_toaster->set_target_temperature(MAX_TEMP);
+    m_toaster->set_target_temperature(DEMO_MAX_TEMP);
     m_toaster->heater_on();
 }
 
@@ -106,7 +106,7 @@ void tao::HeatingSuperState::process_internal_event(InternalEvent event)
 void tao::HeatingSuperState::on_exit()
 {
     // std::cout << "HeatingSuperState::on_exit" << std::endl;
-    m_toaster->set_target_temperature(AMBIENT_TEMP);
+    m_toaster->set_target_temperature(DEMO_AMBIENT_TEMP);
     m_toaster->heater_off();
 }
 
@@ -117,7 +117,7 @@ Implementations of tao::ToastingState
 void tao::ToastingState::on_entry(void)
 {
     // std::cout << "ToastingState::on_entry" << std::endl;
-    m_toaster->set_target_temperature(MAX_TEMP);
+    m_toaster->set_target_temperature(DEMO_MAX_TEMP);
     m_toaster->heater_on(); /* TODO: This might be removed if Issue#2 is fixed */
     m_toaster->arm_time_event(Toaster::ToastLevel::slightly_overcooked_toast);
 }
@@ -139,7 +139,7 @@ void tao::ToastingState::process_internal_event(InternalEvent event)
 void tao::ToastingState::on_exit(void)
 {
     // std::cout << "ToastingState::on_exit" << std::endl;
-    m_toaster->set_target_temperature(AMBIENT_TEMP);
+    m_toaster->set_target_temperature(DEMO_AMBIENT_TEMP);
     m_toaster->heater_off(); /* TODO: This might be removed if Issue#2 is fixed */
     m_toaster->disarm_time_event();
 }
@@ -176,7 +176,7 @@ void tao::BakingState::process_internal_event(InternalEvent event)
 void tao::BakingState::on_exit(void)
 {
     // std::cout << "BakingState::on_exit" << std::endl;
-    m_toaster->set_target_temperature(AMBIENT_TEMP);
+    m_toaster->set_target_temperature(DEMO_AMBIENT_TEMP);
     m_toaster->heater_off(); /* TODO: This might be removed if Issue#2 is fixed */
     m_toaster->disarm_time_event();
 }
