@@ -6,6 +6,7 @@
 namespace Sensors
 {
 
+template <typename callback>
 class ITempSensor
 {
    public:
@@ -15,10 +16,7 @@ class ITempSensor
         Off
     };
 
-    virtual void initialize(...)
-    {
-        std::cout << "virtual void initialize(...)" << std::endl;
-    }
+    virtual void   initialize(callback cb)            = 0;
     virtual void   turn_on()                          = 0;
     virtual void   turn_off()                         = 0;
     virtual float  get_temperature() const            = 0;

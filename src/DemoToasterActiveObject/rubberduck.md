@@ -4,13 +4,18 @@
 ## Context:
 
 
-- I have a `Toaster` class which implements an active object pattern
+- I have a `Toaster` class
 
-- `Toaster` constructor requires (amongst other parameters) a `ITempSensor` object, which models an **Aggregation** relationship
+- `Toaster` constructor requires (amongst other parameters) a `ITempSensor` object, which models an **Aggregation** relationship between `Toaster` and `ITempSensor`
 
-- `ITempSensor` is an interface that models the basics of a temperature sensor
+- `ITempSensor` is an interface class that models the basics of a temperature sensor
 
-- The reason to have an interface instead of a direct implementation is that I want to be able to use polymorphism to construct `Toaster` objects in 3 basic different scenarios:
+```C++
+   private:
+    std::shared_ptr<Sensors::ITempSensor> m_temp_sensor;
+```
+
+- The reason to have an interface is that I want to be able to use polymorphism to construct `Toaster` objects in 3 basic different scenarios:
 
     - A demo scenario
 
@@ -24,6 +29,14 @@
 
         - In this case, the `Toaster` object would be constructed with a `TempSensorI2C` implementation of the `ITempSensor` interface
 
+```C++
+auto toaster = std::make_shared<Toaster>(std::make_shared<DemoObjects::HeaterDemo>(),
+                                        std::make_shared<DemoObjects::TempSensorDemo>());
+
+auto toaster = std::make_shared<Toaster>(std::make_shared<Mocks::HeaterMock>(),
+                                        std::make_shared<Mocks::TempSensorMock>());
+```
+
 ## Problem:
 
 
@@ -36,7 +49,13 @@ void register_callback(F &&handler)
 }
 ```
 
-- This makes issues a compilation error and breaks the polymorphism strategy
+- This issues a compilation error and breaks the polymorphism strategy
+```bash
+.../threaded-active-object/lib/ToasterActiveObject/ToasterActiveObject.hpp:370:24: error: ‘using element_type = class Sensors::ITempSensor’ {aka ‘class Sensors::ITempSensor’} has no member named ‘register_callback’
+  370 |         m_temp_sensor->register_callback(
+      | 
+```
+
 
 ## Possible solutions
 

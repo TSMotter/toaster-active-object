@@ -250,11 +250,10 @@ class HeaterDemo : public Actuators::IHeater
     float         m_temp;
     DeadlineTimer m_heater_timer;
 };
-
-class TempSensorDemo : public Sensors::ITempSensor
+using TempSensorSpecializedCallback = Sensors::ITempSensor<std::function<void(const TempSensorEvent &)>>;
+class TempSensorDemo : public TempSensorSpecializedCallback
 {
-    using signal_t   = boost::signals2::signal<void(const TempSensorEvent &evt)>;
-    using callback_t = std::function<void(const TempSensorEvent &)>;
+    using signal_t = boost::signals2::signal<void(const TempSensorEvent &evt)>;
 
    public:
     TempSensorDemo(const float &toaster_temp = global_curr_temp_inside_toaster, float error = 2.0f)
@@ -272,7 +271,7 @@ class TempSensorDemo : public Sensors::ITempSensor
     }
 
     // Overloading the initialize method
-    void initialize(callback_t cb)
+    void initialize(std::function<void(const TempSensorEvent &)> cb) override
     {
         register_callback(cb);
     }
@@ -360,7 +359,7 @@ class Toaster
         charcoal,
     };
 
-    Toaster(std::shared_ptr<Actuators::IHeater> htr, std::shared_ptr<Sensors::ITempSensor> ssr)
+    Toaster(std::shared_ptr<Actuators::IHeater> htr, std::shared_ptr<DemoObjects::TempSensorSpecializedCallback> ssr)
         : m_queue{std::make_shared<SimplestThreadSafeQueue<tao::IncomingEventWrapper>>()},
           m_heater{htr},
           m_temp_sensor{ssr},
@@ -419,11 +418,11 @@ class Toaster
     }
 
    private:
-    std::shared_ptr<Actuators::IHeater>   m_heater;
-    std::shared_ptr<Sensors::ITempSensor> m_temp_sensor;
-    float                                 m_target_temp;
-    std::thread                           m_thread;
-    DeadlineTimer                         m_timer;
+    std::shared_ptr<Actuators::IHeater>      m_heater;
+    std::shared_ptr<DemoObjects::TempSensorSpecializedCallback> m_temp_sensor;
+    float                                    m_target_temp;
+    std::thread                              m_thread;
+    DeadlineTimer                            m_timer;
 };
 
 #endif
