@@ -18,9 +18,6 @@
 ```bash
 ./bbuild.sh -b <target>
 ```
-- Here, `<target>` should be substituted by one of the `Demo<...>` sub-folders inside the `src` folder or the `test` folder
-  - Example: `./bbuild.sh -b DemoThreadSafeQueue`
-  - Example: `./bbuild.sh -b test`
 
 - To rebuild:
 ```bash
@@ -32,12 +29,12 @@
 ./bbuild.sh -e <target>
 ```
 
-- To format, build and execute:
+- To format, rebuild and execute with verbose:
 ```bash
-./bbuild.sh -f -b -e <target>
+./bbuild.sh -v -f -r -e <target>
 ```
-  - Example: `./bbuild.sh -f -b -e DemoToasterActiveObject`
-  - Example: `./bbuild.sh -f -b -e test`
+  - Example: `./bbuild.sh -v -f -r -e app`
+  - Example: `./bbuild.sh -v -f -r -e test`
 
 - To check all options available::
 ```bash
