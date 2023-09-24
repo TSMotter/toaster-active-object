@@ -18,7 +18,7 @@ function print_help()
     cat << EOF
     Use like this:
 
-    ./do.sh <flags> <target>
+    ./bbuild.sh <flags> <target>
 
     flags:
     -f, --format        [f]ormat all source files with clang-formatter
@@ -26,6 +26,9 @@ function print_help()
     -r, --rebuild       [r]euild
     -e, --execute       [e]xecute
     -v, --verbose       [v]erbose
+
+    targets:
+     <target> is a positional argument. Either "app" of "test"
 EOF
 
     return 0
@@ -108,6 +111,18 @@ function func_rebuild()
 ################################################################################
 
 #
+# Execute the binary
+#
+function func_execute()
+{
+    print_banner "Executing code"
+
+    ./build/main
+}
+
+################################################################################
+
+#
 # Gather all params passed to the script
 #
 function gather_params()
@@ -171,7 +186,7 @@ function execute_logic()
         func_rebuild "$global_value_target"
     fi
     if [[ global_flag_e_execute -eq 1 ]]; then
-        ./build/main
+        func_execute
     fi
 }
 
