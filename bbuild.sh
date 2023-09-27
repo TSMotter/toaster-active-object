@@ -2,6 +2,7 @@
 
 # Global flags
 global_flag_f_format=0
+global_flag_s_format=0
 global_flag_b_build=0
 global_flag_r_rebuild=0
 global_flag_e_execute=0
@@ -22,6 +23,7 @@ function print_help()
 
     flags:
     -f, --format        [f]ormat all source files with clang-formatter
+    -s, --static        [s]tatic analysis all source files with clang-tidy
     -b, --build         [b]uild
     -r, --rebuild       [r]euild
     -e, --execute       [e]xecute
@@ -84,6 +86,19 @@ function func_format()
 ################################################################################
 
 #
+# Static analysis with clang-tidy
+#
+function func_static()
+{
+    print_banner "Performing static analysis on code"
+    print_header "Not implemented yet..."
+
+    #find . -iname '*.*pp' | grep --invert-match './build' | xargs clang-tidy -format-style=file -header-filter=. -p build -checks=-*,clang-analyzer-*,-clang-analyzer-cplusplus*
+}
+
+################################################################################
+
+#
 # Build with make/cmake
 #
 function func_build()
@@ -133,6 +148,10 @@ function gather_params()
                 global_flag_f_format=1
                 shift
                 ;;
+            -s | --static)
+                global_flag_s_format=1
+                shift
+                ;;
             -b | --build)
                 global_flag_b_build=1
                 shift
@@ -160,7 +179,9 @@ function gather_params()
         esac
     done
 
-    if [[ global_flag_f_format -eq 0 ]]; then
+    # Allow only format or static analysis without specifying <target>
+    #if [ global_flag_f_format -eq 0 ] && [ global_flag_s_format -eq 0 ]; then
+    if [ "$global_flag_f_format" -eq 0 ] && [ "$global_flag_s_format" -eq 0 ]; then
         if [[ -z "$global_value_target" ]]; then
             echo "Please, define a <target>"
             print_help
@@ -178,6 +199,9 @@ function execute_logic()
 {
     if [[ global_flag_f_format -eq 1 ]]; then
         func_format
+    fi
+    if [[ global_flag_s_format -eq 1 ]]; then
+        func_static
     fi
     if [[ global_flag_b_build -eq 1 ]]; then
         func_build "$global_value_target"

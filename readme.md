@@ -9,9 +9,18 @@
 
 
 ## How to operate the repository
+- If you wish to use docker to operate the repository, build the image and launch it using the helper scripts inside of the `docker` folder
+- The repository can be operated outside of the docker container if all the dependencies are met
+- Once the environment is set (whether inside or outside the container), the following commands can be issued:
+
 - To format the code base with clang-format:
 ```bash
 ./bbuild.sh -f
+```
+
+- To perform an static analysis in the code base with clang-tidy:
+```bash
+./bbuild.sh -s
 ```
 
 - To build:
@@ -29,12 +38,12 @@
 ./bbuild.sh -e <target>
 ```
 
-- To format, rebuild and execute with verbose:
+- To format, analyze, rebuild and execute with verbose turned ON:
 ```bash
-./bbuild.sh -v -f -r -e <target>
+./bbuild.sh -v -f -s -r -e <target>
 ```
-  - Example: `./bbuild.sh -v -f -r -e app`
-  - Example: `./bbuild.sh -v -f -r -e test`
+- Example: `./bbuild.sh -v -f -s -r -e app`
+- Example: `./bbuild.sh -v -f -s -r -e test`
 
 - To check all options available::
 ```bash
