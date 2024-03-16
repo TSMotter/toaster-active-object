@@ -9,4 +9,5 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(TARGET_GROUP helloworld CACHE STRING "Specify the TARGET_GROUP?")
 
 add_subdirectory(lib)
+add_subdirectory(external)
 add_subdirectory("${TARGET_GROUP}")

@@ -27,8 +27,8 @@ add_executable(${UNIT_TESTS_CMAKE_TARGET}
 
 # Make the directory known
 target_include_directories(${UNIT_TESTS_CMAKE_TARGET} PUBLIC
-    ${CMAKE_SOURCE_DIR}/lib/BoostDeadlineTimer
-    ${CMAKE_SOURCE_DIR}/lib/ThreadSafeQueue
+    ${CMAKE_SOURCE_DIR}/lib/Infrastructure/BoostDeadlineTimer
+    ${CMAKE_SOURCE_DIR}/lib/Infrastructure/ThreadSafeQueue
     ${CMAKE_SOURCE_DIR}/lib/ToasterActiveObject
 )
 

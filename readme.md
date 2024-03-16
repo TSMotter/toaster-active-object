@@ -1,9 +1,9 @@
 # Active Object Pattern
 
-- This repository implements (or at least tries to) the active object pattern in C++ as is described in the book "Practical UML Statecharts in C/C++: Event-Driven Programming for Embedded Systems - Miro Samek".
+- This repository show a C++ implementation of the Active Objects (Actors) pattern as is described in the book "Practical UML Statecharts in C/C++: Event-Driven Programming for Embedded Systems - Miro Samek".
 
-- The example implemented is the Toaster example, presented in Chapter 2
-<img src="img/toaster-statechart.png" width="400"/>
+- The example implemented is the Toaster example, presented in Chapter 2 of the book
+<img src="doc/img/toaster-statechart.png" width="600"/>
 
 - In this pattern, Active Objects (Actors) are event-driven, strictly encapsulated software objects running in their own threads of control that communicate with one another asynchronously by exchanging events.
 
@@ -22,6 +22,8 @@
 ```bash
 ./bbuild.sh -s
 ```
+
+- In the following examples, `<target>` is either `app` or `test`
 
 - To build:
 ```bash
@@ -42,8 +44,10 @@
 ```bash
 ./bbuild.sh -v -f -s -r -e <target>
 ```
-- Example: `./bbuild.sh -v -f -s -r -e app`
-- Example: `./bbuild.sh -v -f -s -r -e test`
+
+- Examples:
+    - `./bbuild.sh -v -f -s -r -e app`
+    - `./bbuild.sh -v -f -s -r -e test`
 
 - To check all options available::
 ```bash
