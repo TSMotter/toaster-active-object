@@ -1,2 +1,4 @@
+add_subdirectory(Actuators)
 add_subdirectory(Infrastructure)
+add_subdirectory(Sensors)
 add_subdirectory(ToasterActiveObject)

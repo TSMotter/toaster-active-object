@@ -5,8 +5,6 @@ find_package(Boost 1.74.0 REQUIRED)
 # **** Creates binary targets ****
 # ******************************************************************************
 # Add a cmake binary taget (in this case, libraries)
-add_library(Actuators INTERFACE Actuators.hpp)
-add_library(Sensors INTERFACE Sensors.hpp)
 add_library(Events
             Events.cpp
             Events.hpp)
@@ -19,6 +17,8 @@ add_library(ToasterActiveObject
 # ******************************************************************************
 target_include_directories(ToasterActiveObject PUBLIC 
                             ${Boost_INCLUDE_DIR}
+                            ${CMAKE_SOURCE_DIR}/lib/Actuators
+                            ${CMAKE_SOURCE_DIR}/lib/Sensors
                             ${CMAKE_SOURCE_DIR}/lib/Infrastructure/ThreadSafeQueue
                             ${CMAKE_SOURCE_DIR}/lib/Infrastructure/BoostDeadlineTimer)
 

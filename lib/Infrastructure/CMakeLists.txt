@@ -1,3 +1,4 @@
 add_subdirectory(BoostDeadlineTimer)
+add_subdirectory(Event)
 add_subdirectory(StateManager)
 add_subdirectory(ThreadSafeQueue)

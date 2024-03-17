@@ -1,8 +1,6 @@
 #ifndef __SENSORS__
 #define __SENSORS__
 
-#include "Events.hpp"
-
 namespace Sensors
 {
 

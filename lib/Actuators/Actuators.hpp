@@ -1,8 +1,6 @@
 #ifndef __ACTUATORS__
 #define __ACTUATORS__
 
-#include "Events.hpp"
-
 namespace Actuators
 {
 
