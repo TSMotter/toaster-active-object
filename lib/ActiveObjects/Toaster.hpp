@@ -148,9 +148,37 @@ class Toaster
     using ToasterSuperState_ptr = std::shared_ptr<ToasterSuperState>;
     Toaster() : m_queue{std::make_shared<SimplestThreadSafeQueue<IEvent_ptr>>()}
     {
+        /* clang-format off */
+        tree<ToasterSuperState_ptr> tree;
+        tree.set_head(std::make_shared<ToasterSuperState>(this));
+        m_states[StateValue::ROOT] = tree.begin();
+        m_states[StateValue::STATE_HEATING] = tree.append_child(m_states[StateValue::ROOT], std::make_shared<StateHeating>(this, StateValue::STATE_HEATING));
+        m_states[StateValue::STATE_TOASTING] = tree.append_child(m_states[StateValue::STATE_HEATING], std::make_shared<StateToasting>(this, StateValue::STATE_TOASTING));
+        m_states[StateValue::STATE_BAKING] = tree.append_child(m_states[StateValue::STATE_HEATING], std::make_shared<StateBaking>(this, StateValue::STATE_BAKING));
+        m_states[StateValue::STATE_DOOR_OPEN] = tree.append_child(m_states[StateValue::ROOT], std::make_shared<StateDoorOpen>(this, StateValue::STATE_DOOR_OPEN));
+        m_states[StateValue::UNKNOWN] = tree.end();
+
+        m_next_state = m_states[StateValue::UNKNOWN];
+
+        m_state_manager = std::make_shared<StateManager<ToasterSuperState_ptr>>(std::move(tree), m_states[StateValue::STATE_HEATING]);
+        /* clang-format on */
     }
     ~Toaster()
     {
+    }
+
+    void start();
+    void stop();
+
+    void callback_IEvent(IEvent_ptr event)
+    {
+        m_queue->put(event);
+    }
+
+    template <class T>
+    boost::signals2::connection connect_callback_for_signal_emited_from_A(T&& handler)
+    {
+        return m_signal.connect(handler);
     }
 
     SignalIEvent m_signal;

@@ -69,6 +69,25 @@ void StateDoorOpen::process_event(IEvent_ptr event)
     std::cout << "Method called: " << __PRETTY_FUNCTION__ << std::endl;
 }
 
+void Toaster::start()
+{
+    m_state_manager->init();
+    m_running = true;
+    m_thread  = std::thread(&Toaster::run, this);
+}
+void Toaster::stop()
+{
+    if (!m_running)
+        return;
+
+    // m_queue->put_prioritized(ExternalEventWrapper(InternalEvent::stop_request));
+
+    if (m_thread.joinable())
+        m_thread.join();
+
+    m_queue->clear();
+}
+
 void Toaster::run()
 {
     do
