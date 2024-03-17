@@ -26,7 +26,6 @@ class IEvent
 using IEvent_ptr   = std::shared_ptr<IEvent>;
 using SignalIEvent = boost::signals2::signal<void(IEvent_ptr)>;
 
-
 /***************************************************************************************************
  * CommonEvents
  ***************************************************************************************************/

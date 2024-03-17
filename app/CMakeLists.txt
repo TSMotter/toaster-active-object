@@ -2,6 +2,6 @@
 add_executable(main main.cpp)
 
 # Make the directory known
-target_include_directories(main PUBLIC ${CMAKE_SOURCE_DIR}/lib/ToasterActiveObject)
+target_include_directories(main PUBLIC ${CMAKE_SOURCE_DIR}/lib/ActiveObjects)
 # Link library to a binary target
-target_link_libraries(main PUBLIC ToasterActiveObject)
+target_link_libraries(main PUBLIC Toaster)

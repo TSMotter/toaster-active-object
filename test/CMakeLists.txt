@@ -22,14 +22,12 @@ enable_testing()
 add_executable(${UNIT_TESTS_CMAKE_TARGET}
     testBoostDeadlineTimer.cpp
     testThreadSafeQueue.cpp
-    testToasterActiveObject.cpp
 )
 
 # Make the directory known
 target_include_directories(${UNIT_TESTS_CMAKE_TARGET} PUBLIC
     ${CMAKE_SOURCE_DIR}/lib/Infrastructure/BoostDeadlineTimer
     ${CMAKE_SOURCE_DIR}/lib/Infrastructure/ThreadSafeQueue
-    ${CMAKE_SOURCE_DIR}/lib/ToasterActiveObject
 )
 
 # Link library to the binary target. GTest::gtest_main offers me a default main() function
@@ -37,7 +35,6 @@ target_link_libraries(${UNIT_TESTS_CMAKE_TARGET}
     GTest::gtest_main
     BoostDeadlineTimer
     ThreadSafeQueue
-    ToasterActiveObject
 )
 
 # Enable CMake’s test runner to discover the tests included in the binary

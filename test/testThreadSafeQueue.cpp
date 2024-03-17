@@ -50,15 +50,17 @@ class ThreadSafeQueueFixture : public ::testing::Test
 
 TEST_F(ThreadSafeQueueFixture, TestPoppingWholeString)
 {
-    m_queue->put(std::move(m_test_string1));
-    m_queue->put(std::move(m_test_string2));
+    m_queue->put(m_test_string1);
+    m_queue->put(m_test_string2);
 
     auto runner = [this](std::shared_ptr<IThreadSafeQueue<std::string>> q)
     {
-        std::shared_ptr<std::string> popped_element;
+        std::string popped_element;
         popped_element = q->wait_and_pop_for(std::chrono::milliseconds{100});
-        if (popped_element)
-            ASSERT_TRUE(assertStdStrings(*popped_element));
+        if (!popped_element.empty())
+        {
+            ASSERT_TRUE(assertStdStrings(popped_element));
+        }
     };
 
     std::vector<std::thread> threads;

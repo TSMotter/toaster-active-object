@@ -2,7 +2,7 @@ find_package(Boost 1.74.0 REQUIRED)
 
 # Add a cmake binary taget (in this case, a library)
 add_library(Event INTERFACE)
-target_sources(Event INTERFACE Event.h)
+target_sources(Event INTERFACE Event.hpp)
 
 # Make the directory known
 target_include_directories(Event INTERFACE ${Boost_INCLUDE_DIR})

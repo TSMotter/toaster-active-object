@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <iostream>
 
-#include "ToasterActiveObject.hpp"
+#include "Toaster.hpp"
 
 
 void sigint_handler(int sig)
@@ -18,17 +18,16 @@ int main(int argc, char **argv)
     /* Binds the SIGINT signal to my custom handler */
     signal(SIGINT, sigint_handler);
 
-    auto toaster = std::make_shared<Toaster>(std::make_shared<DemoObjects::HeaterDemo>(),
-                                             std::make_shared<DemoObjects::TempSensorDemo>());
+    auto toaster = std::make_shared<Actor::Toaster>();
 
-    toaster->start();
+    // toaster->start();
 
     while (true)
     {
         int k = 0;
         std::cin >> k;
         std::cout << "---------------------------" << std::endl;
-        toaster->put_external_entity_event(static_cast<ExternalEntityEvtType>(k));
+        // toaster->put_external_entity_event(static_cast<ExternalEntityEvtType>(k));
         std::cout << "---------------------------" << std::endl;
     }
 
