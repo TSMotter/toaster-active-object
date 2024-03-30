@@ -1,10 +1,11 @@
 #ifndef __SENSORS__
 #define __SENSORS__
 
+#include "Event.hpp"
+
 namespace Sensors
 {
 
-template <typename callback>
 class ITempSensor
 {
    public:
@@ -14,7 +15,7 @@ class ITempSensor
         Off
     };
 
-    virtual void   initialize(callback cb)            = 0;
+    virtual void   initialize(SignalIEvent cb)        = 0;
     virtual void   turn_on()                          = 0;
     virtual void   turn_off()                         = 0;
     virtual float  get_temperature() const            = 0;

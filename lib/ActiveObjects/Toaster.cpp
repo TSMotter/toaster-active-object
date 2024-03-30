@@ -88,6 +88,57 @@ void Toaster::stop()
     m_queue->clear();
 }
 
+void Toaster::heater_on()
+{
+    // std::cout << "Toaster::heater_on()" << std::endl;
+    m_heater->turn_on();
+}
+
+void Toaster::heater_off()
+{
+    // std::cout << "Toaster::heater_off()" << std::endl;
+    m_heater->turn_off();
+}
+
+void Toaster::internal_lamp_on()
+{
+    // std::cout << "Toaster::internal_lamp_on()" << std::endl;
+}
+
+void Toaster::internal_lamp_off()
+{
+    // std::cout << "Toaster::internal_lamp_off()" << std::endl;
+}
+
+void Toaster::arm_time_event(long time)
+{
+    if (m_timer.status() == DeadlineTimer::Status::running)
+    {
+        return;
+    }
+    // std::cout << "Toaster::arm_time_event(long time)" << std::endl;
+    m_timer.start(time);
+}
+
+void Toaster::arm_time_event(ToastLevel level)
+{
+    // std::cout << "Toaster::arm_time_event(ToastLevel level)" << std::endl;
+    long period = static_cast<long>(level) * 2000;  // Arbitrary hardcoded value
+    m_timer.start(period);
+}
+
+void Toaster::disarm_time_event()
+{
+    // std::cout << "Toaster::disarm_time_event()" << std::endl;
+    m_timer.stop();
+}
+
+void Toaster::set_target_temperature(float temp)
+{
+    // std::cout << "Toaster::set_target_temperature(float temp) - " << temp << std::endl;
+    m_temp_sensor->set_target_temperature(temp);
+}
+
 void Toaster::run()
 {
     do
@@ -102,4 +153,11 @@ void Toaster::run()
         }
     } while (m_running);
 }
+
+void Toaster::timer_callback()
+{
+    std::shared_ptr<AlarmTimeout> event = std::make_shared<AlarmTimeout>();
+    m_queue->put(event);
+}
+
 }  // namespace Actor

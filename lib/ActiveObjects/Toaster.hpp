@@ -66,13 +66,13 @@ class ToasterSuperState
     virtual void unhandled_event(IEvent_ptr event)
     {
         (void) event;
-        std::cout << "Method called: " << __PRETTY_FUNCTION__ << std::endl;
+        // std::cout << "Method called: " << __PRETTY_FUNCTION__ << std::endl;
     }
 
     virtual void process_event(IEvent_ptr event)
     {
         (void) event;
-        std::cout << "Method called: " << __PRETTY_FUNCTION__ << std::endl;
+        // std::cout << "Method called: " << __PRETTY_FUNCTION__ << std::endl;
     }
 
     virtual StateValue type() const
@@ -145,8 +145,29 @@ class StateDoorOpen : public ToasterSuperState
 class Toaster
 {
    public:
+    enum class DoorStatus
+    {
+        opened,
+        closed
+    };
+
+    enum class ToastLevel
+    {
+        bread,
+        hot_bread,
+        normal_toast,
+        slightly_overcooked_toast,
+        overcooked_toast,
+        charcoal,
+    };
+
     using ToasterSuperState_ptr = std::shared_ptr<ToasterSuperState>;
-    Toaster() : m_queue{std::make_shared<SimplestThreadSafeQueue<IEvent_ptr>>()}
+
+    Toaster(std::shared_ptr<Actuators::IHeater> htr, std::shared_ptr<Sensors::ITempSensor> ssr)
+        : m_heater{htr},
+          m_temp_sensor{ssr},
+          m_timer{1000, boost::bind(&Toaster::timer_callback, this), false},
+          m_queue{std::make_shared<SimplestThreadSafeQueue<IEvent_ptr>>()}
     {
         /* clang-format off */
         tree<ToasterSuperState_ptr> tree;
@@ -167,9 +188,6 @@ class Toaster
     {
     }
 
-    void start();
-    void stop();
-
     void callback_IEvent(IEvent_ptr event)
     {
         m_queue->put(event);
@@ -181,6 +199,18 @@ class Toaster
         return m_signal.connect(handler);
     }
 
+    void start();
+    void stop();
+
+    void heater_on();
+    void heater_off();
+    void internal_lamp_on();
+    void internal_lamp_off();
+    void arm_time_event(long time);
+    void arm_time_event(ToastLevel level);
+    void disarm_time_event();
+    void set_target_temperature(float temp);
+
     SignalIEvent m_signal;
 
     std::shared_ptr<StateManager<ToasterSuperState_ptr>>        m_state_manager;
@@ -189,10 +219,14 @@ class Toaster
 
    private:
     void run();
+    void timer_callback();
 
     bool        m_running{false};
     std::thread m_thread;
 
+    std::shared_ptr<Actuators::IHeater>                  m_heater;
+    std::shared_ptr<Sensors::ITempSensor>                m_temp_sensor;
+    DeadlineTimer                                        m_timer;
     std::shared_ptr<SimplestThreadSafeQueue<IEvent_ptr>> m_queue;
 };
 

@@ -38,4 +38,12 @@ class EventTimeout : public IEvent
     int timeout;
 };
 
+class AlarmTimeout : public IEvent
+{
+   public:
+    AlarmTimeout()
+    {
+    }
+};
+
 #endif
