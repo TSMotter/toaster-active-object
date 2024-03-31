@@ -48,11 +48,11 @@ class DemoTempSensor : public ITempSensor
     }
 
     // Overloading the initialize method
-    void initialize(SignatureIEvent cb) override;
-    void turn_on() override;
-    void turn_off() override;
-    float get_temperature() const override;
-    void set_target_temperature(float temp) override;
+    void                initialize(SignatureIEvent cb) override;
+    void                turn_on() override;
+    void                turn_off() override;
+    float               get_temperature() const override;
+    void                set_target_temperature(float temp) override;
     ITempSensor::Status get_status() const override;
 
    private:

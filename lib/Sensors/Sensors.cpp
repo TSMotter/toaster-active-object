@@ -52,4 +52,4 @@ void DemoTempSensor::callback()
         m_signal(event);
     }
 }
-}
+}  // namespace Sensors
