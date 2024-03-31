@@ -16,8 +16,6 @@ target_include_directories(Toaster PUBLIC
                             ${Boost_INCLUDE_DIR}
                             ${CMAKE_SOURCE_DIR}/lib/Actuators
                             ${CMAKE_SOURCE_DIR}/lib/Sensors
-                            ${CMAKE_SOURCE_DIR}/lib/Infrastructure/BoostDeadlineTimer
-                            ${CMAKE_SOURCE_DIR}/lib/Infrastructure/Event
                             ${CMAKE_SOURCE_DIR}/lib/Infrastructure/StateManager
                             ${CMAKE_SOURCE_DIR}/lib/Infrastructure/ThreadSafeQueue)
 
@@ -28,7 +26,5 @@ target_link_libraries(Toaster PUBLIC
                         ${Boost_LIBRARIES}
                         Actuators
                         Sensors
-                        BoostDeadlineTimer
-                        Event
                         StateManager
                         ThreadSafeQueue)

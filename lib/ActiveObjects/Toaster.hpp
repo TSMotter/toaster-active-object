@@ -183,6 +183,9 @@ class Toaster
 
         m_state_manager = std::make_shared<StateManager<ToasterSuperState_ptr>>(std::move(tree), m_states[StateValue::STATE_HEATING]);
         /* clang-format on */
+
+        m_temp_sensor->initialize(
+            boost::bind(&Toaster::callback_IEvent, this, boost::placeholders::_1));
     }
     ~Toaster()
     {
