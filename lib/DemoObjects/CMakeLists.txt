@@ -1,1 +1,1 @@
-add_library(DemoObjects INTERFACE DemoObjects.hpp)
+add_library(DemoObjects DemoObjects.cpp DemoObjects.hpp)
